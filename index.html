@@ -60,7 +60,7 @@
 
         #progressBarFill { transition: width 0.3s ease-out; }
         #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
-        /* Generic Modal Styles */
+        /* Generic Modal Styles (kept in case needed later, but webhook modal is removed) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
@@ -151,7 +151,7 @@
                 <button onclick="selectSet(3)" class="action-button bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 px-6">Set 3</button>
                 <button onclick="selectSet(4)" class="action-button bg-amber-500 hover:bg-amber-600 text-white w-full py-3 px-6">Set 4</button>
                 <button onclick="selectSet(5)" class="action-button bg-rose-500 hover:bg-rose-600 text-white w-full py-3 px-6">Set 5 (Hardest)</button>
-                 <!-- Button to open webhook settings will be added dynamically -->
+                 <!-- Webhook settings button removed -->
             </div>
         </div>
 
@@ -216,17 +216,7 @@
             </div>
         </div>
 
-        <!-- Webhook Settings Modal -->
-        <div id="webhookModal" class="modal">
-          <div class="modal-content">
-            <span class="modal-close-button" onclick="closeWebhookModal()">×</span>
-            <h2 class="text-xl font-semibold mb-4 text-indigo-800">Webhook Setup</h2>
-            <p class="text-slate-600 mb-4">Enter your Make.com (or other service) webhook URL below to send results data automatically.</p>
-            <input type="url" id="webhookUrlInput" placeholder="https://hook.make.com/xxxxxxxxxxxx" class="w-full p-2 border border-slate-300 rounded mb-4 focus:ring-indigo-500 focus:border-indigo-500">
-             <p class="text-xs text-slate-500 mb-4">You can change this later if needed.</p>
-            <button onclick="saveWebhookUrl()" class="action-button bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4">Save URL</button>
-          </div>
-        </div>
+        <!-- Webhook Settings Modal Removed -->
 
     </div>
 
@@ -238,11 +228,11 @@
         const QUESTIONS_PER_SET = 20; // Aim for this many questions per set
         const TOTAL_SETS = 5;
         const AUTO_PROCEED_DELAY = 600; // 0.6 seconds (slightly longer for division)
-        // ***** UPDATED DEFAULT WEBHOOK URL *****
-        const DEFAULT_WEBHOOK_URL = 'https://hook.us2.make.com/892ix736bi9necs2itozf1dayw9fklsf';
-        // Updated Storage Keys
+        // ***** HARDCODED DEFAULT WEBHOOK URL *****
+        const WEBHOOK_URL = 'https://hook.us2.make.com/892ix736bi9necs2itozf1dayw9fklsf';
+        // Updated Storage Key (only for user name)
         const USER_NAME_STORAGE_KEY = 'xpDividersUserName';
-        const WEBHOOK_URL_STORAGE_KEY = 'xpDividersWebhookUrl';
+        // WEBHOOK_URL_STORAGE_KEY Removed
 
         // --- State Variables ---
         let allDivisionQuestions = [];
@@ -257,7 +247,7 @@
         let proceedTimeoutId = null;
         let isWaitingToProceed = false;
         let selectedSetNumber = 0;
-        let WEBHOOK_URL = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || DEFAULT_WEBHOOK_URL;
+        // WEBHOOK_URL is now a constant defined above
         let userName = localStorage.getItem(USER_NAME_STORAGE_KEY) || '';
 
         // --- Sound Synthesis (Tone.js) ---
@@ -296,8 +286,7 @@
         const incorrectList = document.getElementById('incorrectList');
         const noIncorrectText = document.getElementById('noIncorrectText');
         const redoIncorrectButton = document.getElementById('redoIncorrectButton');
-        const webhookModal = document.getElementById('webhookModal');
-        const webhookUrlInput = document.getElementById('webhookUrlInput');
+        // Webhook modal elements removed
         const encouragementTextEl = document.getElementById('encouragementText');
         const resultsHeadingEl = document.getElementById('resultsHeading');
         const raceTrackContainer = document.querySelector('#resultsScreen .race-track-container');
@@ -326,17 +315,10 @@
 
         function generateAllDivisionQuestions() {
             const questions = new Set();
-            // Generate division facts: dividend / divisor = quotient
-            // Loop through potential quotients and divisors
             for (let quotient = 1; quotient <= MAX_FACTOR; quotient++) {
-                // Start divisor from 2 to avoid trivial division by 1
                 for (let divisor = 2; divisor <= MAX_FACTOR; divisor++) {
                     let dividend = quotient * divisor;
-                    // Optional: Add a constraint on max dividend size if needed
-                    // if (dividend <= MAX_FACTOR * MAX_FACTOR) {
-                         // Store dividend, divisor, and the answer (quotient)
-                         questions.add(JSON.stringify({ dividend: dividend, divisor: divisor, answer: quotient }));
-                    // }
+                    questions.add(JSON.stringify({ dividend: dividend, divisor: divisor, answer: quotient }));
                 }
             }
             console.log(`Generated ${questions.size} unique division questions.`);
@@ -353,34 +335,23 @@
         function createDivisionQuestionSets() {
             allDivisionQuestions = generateAllDivisionQuestions();
             questionSets = Array(TOTAL_SETS).fill(null).map(() => []); // Reset sets
-
-            // Define divisor ranges for difficulty sets
             const setDivisorRanges = [
-                [2, 3],       // Set 1: Divide by 2, 3
-                [4, 5],       // Set 2: Divide by 4, 5
-                [6, 7],       // Set 3: Divide by 6, 7
-                [8, 9],       // Set 4: Divide by 8, 9
-                [10, 11, 12] // Set 5: Divide by 10, 11, 12
+                [2, 3], [4, 5], [6, 7], [8, 9], [10, 11, 12]
             ];
-
-            // Filter questions into sets based on divisor
             allDivisionQuestions.forEach(q => {
                 for (let i = 0; i < TOTAL_SETS; i++) {
                     if (setDivisorRanges[i].includes(q.divisor)) {
                         questionSets[i].push(q);
-                        break; // Add to the first matching set only
+                        break;
                     }
                 }
             });
-
-            // Shuffle each set and limit size
             questionSets = questionSets.map((set, index) => {
                 shuffleArray(set);
                 const finalSet = set.slice(0, QUESTIONS_PER_SET);
                 console.log(`Set ${index + 1} created with ${finalSet.length} questions (Divisors: ${setDivisorRanges[index].join(', ')}).`);
                 return finalSet;
             });
-
              console.log(`Created ${questionSets.length} division sets.`);
         }
 
@@ -415,7 +386,7 @@
             currentSet = questionSets[setIndex - 1];
             selectedSetNumber = setIndex;
 
-            if (!currentSet) { // Check if the set exists, even if empty
+            if (!currentSet) {
                  alert("Error loading question set. Please refresh.");
                  console.error("Selected set is undefined.");
                  return;
@@ -423,7 +394,7 @@
              if (currentSet.length === 0) {
                  alert(`Set ${selectedSetNumber} has no questions generated for the current criteria. Please try another set or adjust generation logic.`);
                  console.warn(`Selected set ${selectedSetNumber} is empty.`);
-                 showSetSelection(); // Go back to selection
+                 showSetSelection();
                  return;
              }
 
@@ -432,8 +403,6 @@
             incorrectAnswers = [];
             isRedoing = false;
             resetCardState();
-
-            // Update Flashcard Screen Title
             flashcardSetTitle.textContent = `XP Dividers Set ${selectedSetNumber}`;
 
             setSelectionScreen.classList.add('hidden');
@@ -441,7 +410,7 @@
             flashcardScreen.classList.remove('hidden');
             startTime = new Date();
             console.log(`Starting set ${selectedSetNumber} with ${currentSet.length} questions.`);
-            displayQuestion(); // Includes initial progress update
+            displayQuestion();
         }
 
         function resetCardState() {
@@ -468,13 +437,11 @@
             }
 
             const questionData = currentSet[currentQuestionIndex];
-            // Display Division Problem
             questionText.textContent = `${questionData.dividend} ÷ ${questionData.divisor} = ?`;
             feedbackText.textContent = '';
             feedbackText.className = 'mt-2 text-lg font-semibold';
 
-            const correctAnswer = questionData.answer; // The answer is the quotient
-            // Generate choices based on the quotient (answer)
+            const correctAnswer = questionData.answer;
             const choices = generateChoices(correctAnswer);
             choices.sort((a, b) => a - b);
 
@@ -485,17 +452,13 @@
                 button.className = 'choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl';
             });
 
-            updateProgress(); // Update progress after setting up the question
+            updateProgress();
         }
 
-        // Simplified generateChoices, focusing on the correct answer (quotient)
         function generateChoices(correctAnswer) {
             const choices = new Set([correctAnswer]);
-
-            // Add choices +/- 1 or 2 from the correct answer
             const offsets = [1, -1, 2, -2];
             shuffleArray(offsets);
-
             for (const offset of offsets) {
                  if (choices.size >= 3) break;
                  const potentialChoice = correctAnswer + offset;
@@ -503,8 +466,6 @@
                      choices.add(potentialChoice);
                  }
             }
-
-            // If still not enough choices, add random numbers near the correct answer
             let attempts = 0;
             while (choices.size < 3 && attempts < 10) {
                 const min = Math.max(1, correctAnswer - 5);
@@ -515,32 +476,25 @@
                 }
                 attempts++;
             }
-
-             // Absolute fallback if duplicates/negatives caused issues
             let fallbackCounter = 1;
              while (choices.size < 3) {
                 let fallbackChoice = correctAnswer + offsets.length + fallbackCounter;
                 if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
                     choices.add(fallbackChoice);
                 } else {
-                    // Try a different number if collision
                     fallbackChoice = Math.max(1, correctAnswer - offsets.length - fallbackCounter);
                      if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
                          choices.add(fallbackChoice);
                      }
                 }
                 fallbackCounter++;
-                 if (fallbackCounter > 10) break; // Prevent infinite loop
+                 if (fallbackCounter > 10) break;
              }
-
-
             return Array.from(choices);
         }
 
-
         function updateProgress() {
             const totalQuestions = currentSet.length;
-            // Use currentQuestionIndex for completed questions BEFORE incrementing
             const completedQuestions = currentQuestionIndex;
             const progressPercentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
             progressText.textContent = `${completedQuestions} / ${totalQuestions}`;
@@ -548,17 +502,14 @@
             console.log(`Progress updated: ${completedQuestions} / ${totalQuestions} (${progressPercentage.toFixed(0)}%)`);
         }
 
-
         function checkAnswer(button) {
             Tone.start().catch(e => console.warn("Audio context likely already started or failed:", e));
-
             if (isWaitingToProceed) return;
-
             console.log(`Checking answer for question index ${currentQuestionIndex}...`);
 
             const selectedAnswer = parseInt(button.dataset.answer);
             const questionData = currentSet[currentQuestionIndex];
-            const correctAnswer = questionData.answer; // The quotient
+            const correctAnswer = questionData.answer;
 
             choiceButtons.forEach(btn => btn.disabled = true);
 
@@ -572,20 +523,17 @@
                  console.log("Answer correct!");
             } else {
                 console.log(`Answer incorrect. Correct: ${correctAnswer}, User: ${selectedAnswer}`);
-                questionText.textContent = ''; // Clear question to show feedback prominently
-                // Show the full correct division fact
+                questionText.textContent = '';
                 feedbackText.innerHTML = `${questionData.dividend} ÷ ${questionData.divisor} = <span class="font-bold text-2xl md:text-3xl">${correctAnswer}</span>`;
                 feedbackText.className = 'mt-2 text-xl md:text-2xl font-semibold text-red-600';
                 button.className = 'choice-button bg-red-500 text-white text-lg md:text-xl';
                 flashcard.classList.add('shake', 'flash-red');
                 choiceButtons.forEach(btn => {
                      if (parseInt(btn.dataset.answer) === correctAnswer) {
-                         // Highlight correct answer gently
                          btn.className = 'choice-button bg-emerald-100 border border-emerald-400 text-slate-600 text-lg md:text-xl opacity-80';
                      }
                 });
                  incorrectSound.triggerAttackRelease("C3", "8n");
-                 // Store the full question data and user's answer for review/redo
                  incorrectAnswers.push({
                     questionData: questionData,
                     userAnswer: selectedAnswer
@@ -602,9 +550,7 @@
             proceedTimeoutId = setTimeout(proceedToNext, AUTO_PROCEED_DELAY);
             console.log(`Auto-proceed timeout set for ${AUTO_PROCEED_DELAY}ms.`);
 
-            currentQuestionIndex++; // Increment index AFTER processing the current question
-             // Update progress bar AFTER incrementing index to show progress towards next question
-            // updateProgress(); // No, update progress *before* showing next question or results
+            currentQuestionIndex++;
         }
 
         function proceedToNext() {
@@ -613,26 +559,22 @@
                  clearTimeout(proceedTimeoutId);
                  proceedTimeoutId = null;
              }
-
              isWaitingToProceed = false;
              flashcard.classList.remove('clickable-card');
              flashcard.style.cursor = 'default';
              continueText.classList.add('hidden');
              flashcard.classList.remove('shake', 'flash-red');
-
-             displayQuestion(); // This will handle showing results if index is out of bounds
+             displayQuestion();
         }
-
 
         function showResults() {
             console.log("Showing results screen.");
             endTime = new Date();
             const timeDiff = Math.round((endTime - startTime) / 1000);
-            const totalQuestions = currentSet.length; // Use actual length of the current set
+            const totalQuestions = currentSet.length;
             const currentScore = isRedoing ? (totalQuestions - incorrectAnswers.length) : score;
             const percentage = totalQuestions > 0 ? Math.round((currentScore / totalQuestions) * 100) : 0;
 
-            // Update Results Title
             resultsHeadingEl.textContent = isRedoing ? 'Review Complete!' : `XP Dividers Set ${selectedSetNumber} Complete!`;
             scoreDisplayEl.textContent = `${currentScore} / ${totalQuestions}`;
             percentageEl.textContent = `${percentage}`;
@@ -652,12 +594,10 @@
             flashcardScreen.classList.add('hidden');
             resultsScreen.classList.remove('hidden');
 
-            // --- Rocket Animation ---
             const trackWidth = raceTrackContainer.offsetWidth;
-            const effectiveTrackWidth = trackWidth - 24; // Adjust based on flag emoji size
+            const effectiveTrackWidth = trackWidth - 24;
             const animationDuration = 1500;
             const animationStartTime = performance.now();
-
             rocketEl.style.left = '0px';
             raceTrackFillEl.style.width = '0px';
 
@@ -666,10 +606,8 @@
                 const progress = Math.min(elapsedTime / animationDuration, 1);
                 const animatedPercentage = Math.round(progress * percentage);
                 const position = Math.max(0, (animatedPercentage / 100) * effectiveTrackWidth);
-
                 rocketEl.style.left = `${position}px`;
                 raceTrackFillEl.style.width = `${position}px`;
-
                 if (progress < 1) {
                     requestAnimationFrame(animateRocket);
                 } else {
@@ -682,32 +620,29 @@
             requestAnimationFrame(animateRocket);
              console.log("Rocket and progress bar animation started.");
 
-            // --- Incorrect Answers List ---
             incorrectList.innerHTML = '';
-            const finalIncorrect = incorrectAnswers; // Use the state variable
+            const finalIncorrect = incorrectAnswers;
             if (finalIncorrect.length > 0) {
                 incorrectListContainer.classList.remove('hidden');
                 noIncorrectText.classList.add('hidden');
                 finalIncorrect.forEach(item => {
                     const listItem = document.createElement('li');
-                    // Display the division problem, correct answer, and user answer
                     listItem.textContent = `${item.questionData.dividend} ÷ ${item.questionData.divisor} = ${item.questionData.answer} (You answered: ${item.userAnswer})`;
                     incorrectList.appendChild(listItem);
                 });
                  if (!isRedoing) {
-                    redoIncorrectButton.classList.remove('hidden'); // Show redo button only on initial run
+                    redoIncorrectButton.classList.remove('hidden');
                  } else {
-                     redoIncorrectButton.classList.add('hidden'); // Hide redo button during redo session
+                     redoIncorrectButton.classList.add('hidden');
                  }
-
             } else {
                 incorrectListContainer.classList.add('hidden');
                 noIncorrectText.classList.remove('hidden');
-                redoIncorrectButton.classList.add('hidden'); // Hide if no incorrect answers
+                redoIncorrectButton.classList.add('hidden');
             }
 
              // --- Prepare and Send Webhook Data ---
-             const userOS = navigator.platform || 'N/A';
+             const userDeviceInfo = navigator.platform || 'N/A'; // Renamed variable for clarity
              const localTime = new Date().toString();
              let userTimezone = 'N/A';
              try {
@@ -715,31 +650,28 @@
              } catch (e) {
                  console.warn("Could not determine timezone:", e);
              }
-
-            // Prepare incorrect answers in a readable format for the webhook
             const incorrectDetails = finalIncorrect.map(item => ({
-                question: `${item.questionData.dividend} / ${item.questionData.divisor}`, // Use / for data
+                question: `${item.questionData.dividend} / ${item.questionData.divisor}`,
                 correctAnswer: item.questionData.answer,
                 userAnswer: item.userAnswer
             }));
 
-
             sendResultsToWebhook({
                 name: userName,
-                activity: "Division", // Add activity type
+                activity: "Division",
                 set: selectedSetNumber,
                 score: currentScore,
                 totalQuestions: totalQuestions,
                 percentage: percentage,
                 timeTaken: timeDiff,
-                incorrectAnswers: incorrectDetails, // Send structured incorrect data
+                incorrectAnswers: incorrectDetails,
                 isRedoing: isRedoing,
-                os: userOS,
+                // ***** UPDATED KEY: device *****
+                device: userDeviceInfo,
                 deviceTime: localTime,
                 timezone: userTimezone
             });
 
-            // Clear incorrect answers only AFTER sending webhook and if redoing
             if (isRedoing) {
                 incorrectAnswers = [];
                 isRedoing = false;
@@ -748,32 +680,23 @@
 
         function redoIncorrect() {
             console.log("Redoing incorrect answers.");
-            // Get the question data from the incorrect answers list
             const questionsToRedo = incorrectAnswers.map(item => item.questionData);
-
             if (questionsToRedo.length === 0) {
                 alert("No incorrect answers to redo!");
                 return;
             }
-
-            currentSet = questionsToRedo; // Use the extracted question data objects directly
+            currentSet = questionsToRedo;
             shuffleArray(currentSet);
-
             currentQuestionIndex = 0;
-            // Don't reset score, results calculation handles it based on isRedoing
-            incorrectAnswers = []; // Clear the list for the redo round
-            isRedoing = true; // Set the flag
-
-            // Update Flashcard Screen Title for Redo
+            incorrectAnswers = [];
+            isRedoing = true;
             flashcardSetTitle.textContent = `XP Dividers - Redoing Missed`;
-
             resultsScreen.classList.add('hidden');
             flashcardScreen.classList.remove('hidden');
             startTime = new Date();
             console.log(`Starting redo round with ${currentSet.length} questions.`);
-            displayQuestion(); // Start the redo round
+            displayQuestion();
         }
-
 
         function showSetSelection() {
             console.log("Showing set selection screen.");
@@ -782,42 +705,29 @@
                 proceedTimeoutId = null;
             }
             isWaitingToProceed = false;
-            isRedoing = false; // Ensure redo flag is reset
-            // incorrectAnswers = []; // Clear incorrect from previous runs when going back to main menu
-
+            isRedoing = false;
             nameModal.style.display = 'none';
             flashcardScreen.classList.add('hidden');
             resultsScreen.classList.add('hidden');
             setSelectionScreen.classList.remove('hidden');
-
-            // Reset progress display for a potential new set
-            progressText.textContent = `0 / 0`; // Reset fully
+            progressText.textContent = `0 / 0`;
             progressBarFill.style.width = '0%';
-
-             if (!document.getElementById('webhookSettingsButton')) {
-                 addWebhookSettingsButton();
-             }
+            // Removed addWebhookSettingsButton call
             console.log("Resetting progress display and showing set selection.");
         }
 
         function sendResultsToWebhook(resultsData) {
-            if (!WEBHOOK_URL || WEBHOOK_URL === DEFAULT_WEBHOOK_URL && !localStorage.getItem(WEBHOOK_URL_STORAGE_KEY)) { // Also check if it's still the default *and* not explicitly saved
-                console.log("Webhook URL not set or is default (and not saved). Skipping sending results.");
-                return;
-            }
              if (!navigator.onLine) {
                 console.warn("Browser is offline. Skipping sending results.");
                 return;
              }
-
-
+            // No longer check for default URL as it's always used
             console.log("Attempting to send results to webhook:", WEBHOOK_URL);
             console.log("Webhook Payload:", resultsData);
 
-
             fetch(WEBHOOK_URL, {
                 method: 'POST',
-                 mode: 'cors', // Needed for cross-origin requests to services like Make.com
+                 mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -825,14 +735,12 @@
             })
             .then(response => {
                 if (!response.ok) {
-                     // Try to get text even if response is not ok
                      return response.text().then(text => {
                          console.error(`Webhook response not OK: ${response.status} ${response.statusText}`, `Response body: ${text}`);
                          throw new Error(`Webhook failed with status ${response.status}. Body: ${text}`);
                      });
                 } else {
                     console.log('Results successfully sent to webhook.');
-                    // Try to parse JSON, fall back to text if not JSON
                     return response.json().catch(() => response.text());
                 }
             })
@@ -841,77 +749,20 @@
              })
             .catch((error) => {
                 console.error('Error sending results to webhook:', error);
-                 // Potentially alert the user or log more visibly if needed
-                 // alert('There was an issue sending your results data. Please check your connection or webhook setup.');
             });
         }
 
-        function openWebhookModal() {
-            webhookUrlInput.value = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || ''; // Show saved URL or empty
-            webhookModal.style.display = 'flex';
-        }
-
-        function closeWebhookModal() {
-            webhookModal.style.display = 'none';
-        }
-
-        function saveWebhookUrl() {
-            const url = webhookUrlInput.value.trim();
-            if (!url) {
-                 // Clear the stored URL and reset to default (but don't use default for sending unless explicitly saved)
-                 localStorage.removeItem(WEBHOOK_URL_STORAGE_KEY);
-                 WEBHOOK_URL = DEFAULT_WEBHOOK_URL; // Reset internal variable, but sending will be skipped
-                 console.log("Webhook URL cleared.");
-                 closeWebhookModal();
-                 return;
-            }
-
-            // Basic URL validation (doesn't guarantee it's a working webhook)
-            try {
-                new URL(url); // Check if it's a valid URL structure
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                     throw new Error("URL must start with http:// or https://");
-                }
-                // Save the valid URL
-                 localStorage.setItem(WEBHOOK_URL_STORAGE_KEY, url);
-                 WEBHOOK_URL = url; // Update internal variable
-                 console.log("Webhook URL saved:", WEBHOOK_URL);
-                 closeWebhookModal();
-
-             } catch (e) {
-                 console.error("Invalid URL format:", e.message);
-                 alert(`Invalid URL format. Please enter a valid webhook URL starting with http:// or https://. Error: ${e.message}`);
-             }
-        }
-
-
-        function addWebhookSettingsButton() {
-            const existingButton = document.getElementById('webhookSettingsButton');
-             if (!existingButton) {
-                const settingsButton = document.createElement('button');
-                settingsButton.textContent = 'Webhook Settings';
-                settingsButton.id = 'webhookSettingsButton';
-                settingsButton.className = 'action-button mt-6 bg-slate-400 hover:bg-slate-500 text-white w-full text-sm py-3 px-6';
-                settingsButton.onclick = openWebhookModal;
-                // Insert after the grid container
-                const setGrid = setSelectionScreen.querySelector('.grid');
-                if (setGrid && setGrid.parentNode) {
-                     setGrid.parentNode.insertBefore(settingsButton, setGrid.nextSibling);
-                } else {
-                    // Fallback if grid structure changes
-                    setSelectionScreen.appendChild(settingsButton);
-                }
-                console.log("Webhook settings button added.");
-            }
-        }
+        // Webhook settings/modal functions removed:
+        // - openWebhookModal
+        // - closeWebhookModal
+        // - saveWebhookUrl
+        // - addWebhookSettingsButton
 
          document.addEventListener('DOMContentLoaded', () => {
-            // Generate division sets first
             createDivisionQuestionSets();
-            addWebhookSettingsButton(); // Ensure button is added
+            // Removed addWebhookSettingsButton call
 
-            // Check for saved user name
-             userName = localStorage.getItem(USER_NAME_STORAGE_KEY);
+            userName = localStorage.getItem(USER_NAME_STORAGE_KEY);
             if (userName) {
                 console.log("User name found in local storage:", userName);
                  showSetSelection();
@@ -920,9 +771,8 @@
                 nameModal.style.display = 'flex';
                 userNameInput.focus();
             }
-             // Load saved webhook URL on startup
-             WEBHOOK_URL = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || DEFAULT_WEBHOOK_URL;
-             console.log("Using Webhook URL:", WEBHOOK_URL === DEFAULT_WEBHOOK_URL && !localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) ? 'Default (will not send unless saved)' : WEBHOOK_URL);
+             // No need to load webhook URL from storage, it's a constant.
+             console.log("Using hardcoded Webhook URL:", WEBHOOK_URL);
          });
 
     </script>
