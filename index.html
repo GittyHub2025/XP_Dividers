@@ -20,21 +20,14 @@
         }
         .shake { animation: shake 0.5s ease-in-out; }
 
-        @keyframes flash-red {
-            0%, 100% { background-color: white; border-color: #d1d5db; }
-            50% { background-color: #fee2e2; border-color: #ef4444; }
-        }
-        .flash-red { animation: flash-red 0.5s ease-in-out; }
-
         /* Button base styles */
         .choice-button, .action-button {
             transition: all 0.2s ease-in-out;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
             border-radius: 0.5rem;
             font-weight: 600;
-            /* Adjusted padding for side-by-side layout */
-            padding: 0.75rem 0.5rem; /* Reduced horizontal padding */
-            text-align: center; /* Ensure text is centered */
+            padding: 0.75rem 0.5rem;
+            text-align: center;
         }
         /* Button hover/active states */
         .choice-button:hover, .action-button:hover {
@@ -60,64 +53,25 @@
 
         #progressBarFill { transition: width 0.3s ease-out; }
         #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
-        /* Generic Modal Styles (kept in case needed later, but webhook modal is removed) */
+        /* Generic Modal Styles (kept in case needed later) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-close-button:hover, .modal-close-button:focus { color: black; text-decoration: none; cursor: pointer; }
 
         /* Custom styles for the rocket progress bar */
-        .race-track-container {
-            position: relative;
-            width: 100%;
-            height: 30px; /* Height of the track area */
-            margin-top: 20px; /* Space above the track */
-            margin-bottom: 20px; /* Space below the track */
-            z-index: 1; /* Base z-index for container */
-        }
+        .race-track-container { position: relative; width: 100%; height: 30px; margin-top: 20px; margin-bottom: 20px; z-index: 1; }
+        .race-track { position: absolute; bottom: 0; left: 0; width: calc(100% - 30px); height: 10px; background-color: #d1d5db; border-radius: 5px; z-index: 2; }
+        .race-track-fill { position: absolute; bottom: 0; left: 0; height: 10px; background-color: #3b82f6; border-radius: 5px; width: 0%; z-index: 3; }
+        .rocket { position: absolute; bottom: -8px; left: 0; font-size: 36px; transform: translateX(-50%) ; z-index: 10; }
+        .checkered-flag { position: absolute; bottom: -8px; right: 0; font-size: 24px; transform: translateX(50%); z-index: 10; }
 
-        .race-track {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: calc(100% - 30px); /* Make space for the flag at the end */
-            height: 10px;
-            background-color: #d1d5db; /* Slate-300 (Background color) */
-            border-radius: 5px;
-            z-index: 2; /* Behind the fill */
-        }
-
-        /* New style for the colored fill */
-        .race-track-fill {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 10px;
-            background-color: #3b82f6; /* Blue-500 (Fill color) */
-            border-radius: 5px;
-            width: 0%; /* Starts at 0, expands with animation */
-            z-index: 3; /* Above the background track */
-        }
-
-
-        /* Style for the rocket emoji */
-        .rocket {
-            position: absolute;
-            bottom: -8px; /* Adjust to position rocket on the track */
-            left: 0; /* Starting position */
-            font-size: 36px; /* Size of the emoji */
-            transform: translateX(-50%) ; /* Center the emoji */
-            z-index: 10; /* Ensure rocket is above the track and fill */
-        }
-
-        .checkered-flag {
-            position: absolute;
-            bottom: -8px; /* Align flag with the track */
-            right: 0;
-            font-size: 24px; /* Size of the emoji */
-            transform: translateX(50%); /* Center the flag emoji on the position */
-            z-index: 10; /* Ensure flag is above the track and fill */
-        }
+        /* Default Flashcard Text Color */
+        #flashcard.bg-white #questionText { color: #334155; /* slate-700 */ }
+        /* Ensure Question Text is white when card background changes */
+        #flashcard.text-white #questionText { color: white; }
+        /* Ensure feedback text is white when card background changes */
+         #flashcard.text-white #feedbackText { color: white; }
 
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,7 +85,6 @@
         <!-- Name Input Modal -->
          <div id="nameModal" class="modal">
              <div class="modal-content text-center">
-                 <!-- Updated Title -->
                  <h2 class="text-xl md:text-2xl font-semibold mb-4 text-indigo-800">Welcome, XP Divider!</h2>
                  <p class="text-slate-600 mb-4">Please enter your name to get started.</p>
                  <input type="text" id="userNameInput" placeholder="Your Name" class="w-full p-2 border border-slate-300 rounded mb-4 focus:ring-indigo-500 focus:border-indigo-500 text-center text-lg">
@@ -141,23 +94,19 @@
 
         <!-- Set Selection Screen -->
         <div id="setSelectionScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
-            <!-- Updated Title -->
             <h1 class="text-2xl md:text-3xl font-bold text-indigo-800 mb-6">XP Dividers</h1>
             <p class="text-slate-600 mb-8">Choose a difficulty set:</p>
             <div class="grid grid-cols-1 gap-4">
-                <!-- Updated Set Button Text -->
                 <button onclick="selectSet(1)" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white w-full py-3 px-6">Set 1 (Easiest)</button>
                 <button onclick="selectSet(2)" class="action-button bg-sky-500 hover:bg-sky-600 text-white w-full py-3 px-6">Set 2</button>
                 <button onclick="selectSet(3)" class="action-button bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 px-6">Set 3</button>
                 <button onclick="selectSet(4)" class="action-button bg-amber-500 hover:bg-amber-600 text-white w-full py-3 px-6">Set 4</button>
                 <button onclick="selectSet(5)" class="action-button bg-rose-500 hover:bg-rose-600 text-white w-full py-3 px-6">Set 5 (Hardest)</button>
-                 <!-- Webhook settings button removed -->
             </div>
         </div>
 
         <!-- Flashcard Screen -->
         <div id="flashcardScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg">
-            <!-- Added dynamic title element -->
             <h2 id="flashcardSetTitle" class="text-xl md:text-2xl font-bold text-center text-indigo-700 mb-4">XP Dividers Set X</h2>
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-2">
@@ -168,9 +117,12 @@
                 </div>
             </div>
 
-            <div id="flashcard" class="bg-white border border-slate-300 rounded-lg p-6 mb-6 text-center min-h-[150px] flex flex-col items-center justify-center transition-all duration-200">
+            <!-- Flashcard: Initial classes will be reset in JS -->
+            <div id="flashcard" class="bg-white border border-slate-300 rounded-lg p-6 mb-6 text-center min-h-[150px] flex flex-col items-center justify-center transition-all duration-300 ease-in-out">
                  <div id="flashcardContent">
+                     <!-- Default color set via CSS, will be overridden by text-white on parent -->
                      <p id="questionText" class="text-3xl md:text-4xl font-bold text-slate-800"></p>
+                     <!-- ClassName will be set dynamically -->
                      <p id="feedbackText" class="mt-2 text-lg font-semibold"></p>
                      <p id="continueText" class="mt-4 text-sm text-slate-500 hidden">Tap card to continue...</p>
                  </div>
@@ -186,37 +138,28 @@
 
         <!-- Results Screen -->
         <div id="resultsScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
-            <!-- Updated: resultsHeading will now include the set number -->
             <h2 id="resultsHeading" class="text-2xl md:text-3xl font-bold text-indigo-800 mb-4"></h2>
-
             <div class="bg-emerald-500 text-white p-4 rounded-lg mb-6">
                 <p class="text-lg md:text-xl font-semibold mb-1">Your Score:</p>
                 <p id="scoreDisplay" class="text-4xl md:text-5xl font-bold italic"></p>
             </div>
-
             <div class="race-track-container">
-                <div class="race-track"></div> <!-- Background track -->
-                <div id="raceTrackFill" class="race-track-fill"></div> <!-- Colored fill -->
-                <span id="rocketEl" class="rocket">🚀</span>
-                <span id="checkeredFlag" class="checkered-flag">🏁</span>
+                <div class="race-track"></div> <div id="raceTrackFill" class="race-track-fill"></div>
+                <span id="rocketEl" class="rocket">🚀</span> <span id="checkeredFlag" class="checkered-flag">🏁</span>
             </div>
             <p class="text-lg text-slate-700 mb-2">Percentage: <span id="percentage" class="font-semibold"></span>%</p>
             <p class="text-lg text-slate-700 mb-6">Time: <span id="timeTaken" class="font-semibold"></span> seconds</p>
-
             <p id="encouragementText" class="text-lg text-indigo-700 font-semibold mb-6"></p>
             <div id="incorrectListContainer" class="mb-6 text-left">
                 <h3 class="text-xl font-semibold text-red-600 mb-3">Review Incorrect Answers:</h3>
                 <ul id="incorrectList" class="list-disc list-inside space-y-1 text-slate-600"></ul>
                  <p id="noIncorrectText" class="text-emerald-600 font-semibold hidden">Great job, no incorrect answers!</p>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button id="redoIncorrectButton" onclick="redoIncorrect()" class="action-button bg-orange-500 hover:bg-orange-600 text-white w-full py-3 px-6">Redo Incorrect</button>
                 <button onclick="showSetSelection()" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white w-full py-3 px-6">Choose New Set</button>
             </div>
         </div>
-
-        <!-- Webhook Settings Modal Removed -->
 
     </div>
 
@@ -224,96 +167,48 @@
 
     <script>
         // --- Configuration ---
-        const MAX_FACTOR = 12; // Max quotient and divisor
-        const QUESTIONS_PER_SET = 20; // Aim for this many questions per set
-        const TOTAL_SETS = 5;
-        const AUTO_PROCEED_DELAY = 600; // 0.6 seconds (slightly longer for division)
-        // ***** HARDCODED DEFAULT WEBHOOK URL *****
+        const MAX_FACTOR = 12; const QUESTIONS_PER_SET = 20; const TOTAL_SETS = 5;
+        const AUTO_PROCEED_DELAY = 700; // Slightly longer to see the answer
         const WEBHOOK_URL = 'https://hook.us2.make.com/892ix736bi9necs2itozf1dayw9fklsf';
-        // Updated Storage Key (only for user name)
         const USER_NAME_STORAGE_KEY = 'xpDividersUserName';
-        // WEBHOOK_URL_STORAGE_KEY Removed
 
         // --- State Variables ---
-        let allDivisionQuestions = [];
-        let questionSets = Array(TOTAL_SETS).fill(null).map(() => []); // Initialize as array of 5 empty arrays
-        let currentSet = [];
-        let currentQuestionIndex = 0;
-        let score = 0;
-        let incorrectAnswers = []; // Will store { questionData, userAnswer }
-        let startTime;
-        let endTime;
-        let isRedoing = false;
-        let proceedTimeoutId = null;
-        let isWaitingToProceed = false;
-        let selectedSetNumber = 0;
-        // WEBHOOK_URL is now a constant defined above
-        let userName = localStorage.getItem(USER_NAME_STORAGE_KEY) || '';
+        let allDivisionQuestions = []; let questionSets = Array(TOTAL_SETS).fill(null).map(() => []);
+        let currentSet = []; let currentQuestionIndex = 0; let score = 0; let incorrectAnswers = [];
+        let startTime; let endTime; let isRedoing = false; let proceedTimeoutId = null; let isWaitingToProceed = false;
+        let selectedSetNumber = 0; let userName = localStorage.getItem(USER_NAME_STORAGE_KEY) || '';
 
         // --- Sound Synthesis (Tone.js) ---
-        const correctSound = new Tone.Synth({
-            oscillator: { type: 'triangle' },
-            envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.2 },
-        }).toDestination();
-        const incorrectSound = new Tone.Synth({
-            oscillator: { type: 'square' },
-            envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 }
-        }).toDestination();
+        const correctSound = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.2 }, }).toDestination();
+        const incorrectSound = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
 
         // --- Confetti ---
         const confettiCanvas = document.getElementById('confettiCanvas');
         const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
 
         // --- DOM Elements ---
-        const nameModal = document.getElementById('nameModal');
-        const userNameInput = document.getElementById('userNameInput');
-        const setSelectionScreen = document.getElementById('setSelectionScreen');
-        const flashcardScreen = document.getElementById('flashcardScreen');
-        const resultsScreen = document.getElementById('resultsScreen');
-        const flashcardSetTitle = document.getElementById('flashcardSetTitle'); // Title on flashcard screen
-        const progressText = document.getElementById('progressText');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const flashcard = document.getElementById('flashcard');
-        const questionText = document.getElementById('questionText');
-        const feedbackText = document.getElementById('feedbackText');
-        const continueText = document.getElementById('continueText');
+        const nameModal = document.getElementById('nameModal'); const userNameInput = document.getElementById('userNameInput');
+        const setSelectionScreen = document.getElementById('setSelectionScreen'); const flashcardScreen = document.getElementById('flashcardScreen');
+        const resultsScreen = document.getElementById('resultsScreen'); const flashcardSetTitle = document.getElementById('flashcardSetTitle');
+        const progressText = document.getElementById('progressText'); const progressBarFill = document.getElementById('progressBarFill');
+        const flashcard = document.getElementById('flashcard'); const questionText = document.getElementById('questionText');
+        const feedbackText = document.getElementById('feedbackText'); const continueText = document.getElementById('continueText');
         const answerChoicesContainer = document.getElementById('answerChoices');
         const choiceButtons = [ document.getElementById('choice1'), document.getElementById('choice2'), document.getElementById('choice3') ];
-        const scoreDisplayEl = document.getElementById('scoreDisplay');
-        const percentageEl = document.getElementById('percentage');
-        const timeTakenEl = document.getElementById('timeTaken');
-        const incorrectListContainer = document.getElementById('incorrectListContainer');
-        const incorrectList = document.getElementById('incorrectList');
-        const noIncorrectText = document.getElementById('noIncorrectText');
-        const redoIncorrectButton = document.getElementById('redoIncorrectButton');
-        // Webhook modal elements removed
-        const encouragementTextEl = document.getElementById('encouragementText');
-        const resultsHeadingEl = document.getElementById('resultsHeading');
-        const raceTrackContainer = document.querySelector('#resultsScreen .race-track-container');
-        const raceTrackFillEl = document.getElementById('raceTrackFill');
-        const rocketEl = document.getElementById('rocketEl');
-
+        const scoreDisplayEl = document.getElementById('scoreDisplay'); const percentageEl = document.getElementById('percentage');
+        const timeTakenEl = document.getElementById('timeTaken'); const incorrectListContainer = document.getElementById('incorrectListContainer');
+        const incorrectList = document.getElementById('incorrectList'); const noIncorrectText = document.getElementById('noIncorrectText');
+        const redoIncorrectButton = document.getElementById('redoIncorrectButton'); const encouragementTextEl = document.getElementById('encouragementText');
+        const resultsHeadingEl = document.getElementById('resultsHeading'); const raceTrackContainer = document.querySelector('#resultsScreen .race-track-container');
+        const raceTrackFillEl = document.getElementById('raceTrackFill'); const rocketEl = document.getElementById('rocketEl');
 
         // --- Event Listener for Proceeding (Tap on Flashcard) ---
-        flashcard.addEventListener('click', () => {
-            if (isWaitingToProceed) {
-                console.log("Flashcard tapped, proceeding to next.");
-                proceedToNext();
-            }
-        });
-
+        flashcard.addEventListener('click', () => { if (isWaitingToProceed) proceedToNext(); });
         // --- Event Listener for Enter Key on Name Input ---
-        userNameInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                saveUserName();
-            }
-        });
-
+        userNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveUserName(); } });
 
         // --- Functions ---
-
-        function generateAllDivisionQuestions() {
+        function generateAllDivisionQuestions() { /* ... no changes ... */
             const questions = new Set();
             for (let quotient = 1; quotient <= MAX_FACTOR; quotient++) {
                 for (let divisor = 2; divisor <= MAX_FACTOR; divisor++) {
@@ -324,188 +219,67 @@
             console.log(`Generated ${questions.size} unique division questions.`);
             return Array.from(questions).map(q => JSON.parse(q));
         }
-
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
+        function shuffleArray(array) { /* ... no changes ... */
+            for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; }
         }
-
-        function createDivisionQuestionSets() {
-            allDivisionQuestions = generateAllDivisionQuestions();
-            questionSets = Array(TOTAL_SETS).fill(null).map(() => []); // Reset sets
-            const setDivisorRanges = [
-                [2, 3], [4, 5], [6, 7], [8, 9], [10, 11, 12]
-            ];
-            allDivisionQuestions.forEach(q => {
-                for (let i = 0; i < TOTAL_SETS; i++) {
-                    if (setDivisorRanges[i].includes(q.divisor)) {
-                        questionSets[i].push(q);
-                        break;
-                    }
-                }
-            });
-            questionSets = questionSets.map((set, index) => {
-                shuffleArray(set);
-                const finalSet = set.slice(0, QUESTIONS_PER_SET);
-                console.log(`Set ${index + 1} created with ${finalSet.length} questions (Divisors: ${setDivisorRanges[index].join(', ')}).`);
-                return finalSet;
-            });
+        function createDivisionQuestionSets() { /* ... no changes ... */
+             allDivisionQuestions = generateAllDivisionQuestions();
+             questionSets = Array(TOTAL_SETS).fill(null).map(() => []);
+             const setDivisorRanges = [ [2, 3], [4, 5], [6, 7], [8, 9], [10, 11, 12] ];
+             allDivisionQuestions.forEach(q => { for (let i = 0; i < TOTAL_SETS; i++) { if (setDivisorRanges[i].includes(q.divisor)) { questionSets[i].push(q); break; } } });
+             questionSets = questionSets.map((set, index) => { shuffleArray(set); const finalSet = set.slice(0, QUESTIONS_PER_SET); console.log(`Set ${index + 1}: ${finalSet.length} Qs (Div: ${setDivisorRanges[index].join(', ')})`); return finalSet; });
              console.log(`Created ${questionSets.length} division sets.`);
+         }
+        function saveUserName() { /* ... no changes ... */
+            const name = userNameInput.value.trim(); userName = name ? name : 'Anonymous';
+            if (name) localStorage.setItem(USER_NAME_STORAGE_KEY, userName); else localStorage.removeItem(USER_NAME_STORAGE_KEY);
+            console.log("User name:", userName); nameModal.style.display = 'none'; showSetSelection();
         }
-
-         function saveUserName() {
-            const name = userNameInput.value.trim();
-            if (name) {
-                userName = name;
-                localStorage.setItem(USER_NAME_STORAGE_KEY, userName);
-                console.log("User name saved:", userName);
-            } else {
-                 userName = 'Anonymous';
-                 localStorage.removeItem(USER_NAME_STORAGE_KEY);
-                 console.log("No name entered. Using default:", userName);
-            }
-            nameModal.style.display = 'none';
-            showSetSelection();
+        function selectSet(setIndex) { /* ... no changes ... */
+             console.log(`Selecting division set ${setIndex}.`); Tone.start().catch(e => console.error("Audio ctx error:", e));
+             if (setIndex < 1 || setIndex > questionSets.length) { console.error(`Invalid set index: ${setIndex}`); return; }
+             currentSet = questionSets[setIndex - 1]; selectedSetNumber = setIndex;
+             if (!currentSet) { alert("Error loading set."); console.error("Set undefined."); return; }
+             if (currentSet.length === 0) { alert(`Set ${selectedSetNumber} has no questions.`); console.warn(`Set ${selectedSetNumber} empty.`); showSetSelection(); return; }
+             currentQuestionIndex = 0; score = 0; incorrectAnswers = []; isRedoing = false; resetCardState();
+             flashcardSetTitle.textContent = `XP Dividers Set ${selectedSetNumber}`; setSelectionScreen.classList.add('hidden'); resultsScreen.classList.add('hidden'); flashcardScreen.classList.remove('hidden');
+             startTime = new Date(); console.log(`Starting set ${selectedSetNumber} with ${currentSet.length} questions.`); displayQuestion();
+         }
+        function resetCardState() { /* ... no changes ... */
+             if (proceedTimeoutId) { clearTimeout(proceedTimeoutId); proceedTimeoutId = null; }
+             isWaitingToProceed = false;
+             flashcard.classList.remove('bg-emerald-500', 'bg-red-500', 'text-white', 'shake');
+             flashcard.classList.add('bg-white', 'border', 'border-slate-300');
+             questionText.classList.remove('text-white'); questionText.classList.add('text-slate-800');
+             feedbackText.textContent = ''; feedbackText.className = 'mt-2 text-lg font-semibold';
+             flashcard.style.cursor = 'default'; continueText.classList.add('hidden');
+             console.log("Card state reset.");
+         }
+        function displayQuestion() { /* ... no changes ... */
+             resetCardState(); console.log(`Displaying Q ${currentQuestionIndex + 1}/${currentSet.length}`);
+             if (currentQuestionIndex >= currentSet.length) { showResults(); return; }
+             const questionData = currentSet[currentQuestionIndex]; questionText.textContent = `${questionData.dividend} ÷ ${questionData.divisor} = ?`;
+             const correctAnswer = questionData.answer; const choices = generateChoices(correctAnswer); choices.sort((a, b) => a - b);
+             choiceButtons.forEach((button, index) => { button.textContent = choices[index]; button.disabled = false; button.dataset.answer = choices[index]; button.className = 'choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl'; });
+             updateProgress();
+         }
+        function generateChoices(correctAnswer) { /* ... no changes ... */
+            const choices = new Set([correctAnswer]); const offsets = [1, -1, 2, -2]; shuffleArray(offsets);
+            for (const offset of offsets) { if (choices.size >= 3) break; const potentialChoice = correctAnswer + offset; if (potentialChoice > 0 && !choices.has(potentialChoice)) choices.add(potentialChoice); }
+            let attempts = 0; while (choices.size < 3 && attempts < 10) { const min = Math.max(1, correctAnswer - 5); const max = correctAnswer + 5; let incorrectAnswer = Math.floor(Math.random() * (max - min + 1)) + min; if (incorrectAnswer > 0 && !choices.has(incorrectAnswer)) choices.add(incorrectAnswer); attempts++; }
+            let fallbackCounter = 1; while (choices.size < 3 && fallbackCounter <= 10) { let fallbackChoice = correctAnswer + offsets.length + fallbackCounter; if (fallbackChoice <= 0 || choices.has(fallbackChoice)) { fallbackChoice = Math.max(1, correctAnswer - offsets.length - fallbackCounter); } if (fallbackChoice > 0 && !choices.has(fallbackChoice)) choices.add(fallbackChoice); fallbackCounter++; } return Array.from(choices);
         }
-
-
-        function selectSet(setIndex) {
-            console.log(`Selecting division set ${setIndex}.`);
-            Tone.start().then(() => {
-                console.log("Audio context started.");
-            }).catch(e => {
-                console.error("Error starting audio context:", e);
-            });
-
-            if (setIndex < 1 || setIndex > questionSets.length) {
-                console.error(`Invalid set index selected: ${setIndex}`);
-                return;
-            }
-            currentSet = questionSets[setIndex - 1];
-            selectedSetNumber = setIndex;
-
-            if (!currentSet) {
-                 alert("Error loading question set. Please refresh.");
-                 console.error("Selected set is undefined.");
-                 return;
-            }
-             if (currentSet.length === 0) {
-                 alert(`Set ${selectedSetNumber} has no questions generated for the current criteria. Please try another set or adjust generation logic.`);
-                 console.warn(`Selected set ${selectedSetNumber} is empty.`);
-                 showSetSelection();
-                 return;
-             }
-
-            currentQuestionIndex = 0;
-            score = 0;
-            incorrectAnswers = [];
-            isRedoing = false;
-            resetCardState();
-            flashcardSetTitle.textContent = `XP Dividers Set ${selectedSetNumber}`;
-
-            setSelectionScreen.classList.add('hidden');
-            resultsScreen.classList.add('hidden');
-            flashcardScreen.classList.remove('hidden');
-            startTime = new Date();
-            console.log(`Starting set ${selectedSetNumber} with ${currentSet.length} questions.`);
-            displayQuestion();
-        }
-
-        function resetCardState() {
-            if (proceedTimeoutId) {
-                clearTimeout(proceedTimeoutId);
-                proceedTimeoutId = null;
-            }
-            isWaitingToProceed = false;
-            feedbackText.textContent = '';
-            feedbackText.className = 'mt-2 text-lg font-semibold';
-            flashcard.classList.remove('shake', 'flash-red', 'clickable-card');
-            flashcard.style.cursor = 'default';
-            continueText.classList.add('hidden');
-            console.log("Card state reset.");
-        }
-
-        function displayQuestion() {
-            console.log(`Displaying question ${currentQuestionIndex + 1} / ${currentSet.length}`);
-            resetCardState();
-
-            if (currentQuestionIndex >= currentSet.length) {
-                showResults();
-                return;
-            }
-
-            const questionData = currentSet[currentQuestionIndex];
-            questionText.textContent = `${questionData.dividend} ÷ ${questionData.divisor} = ?`;
-            feedbackText.textContent = '';
-            feedbackText.className = 'mt-2 text-lg font-semibold';
-
-            const correctAnswer = questionData.answer;
-            const choices = generateChoices(correctAnswer);
-            choices.sort((a, b) => a - b);
-
-            choiceButtons.forEach((button, index) => {
-                button.textContent = choices[index];
-                button.disabled = false;
-                button.dataset.answer = choices[index];
-                button.className = 'choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl';
-            });
-
-            updateProgress();
-        }
-
-        function generateChoices(correctAnswer) {
-            const choices = new Set([correctAnswer]);
-            const offsets = [1, -1, 2, -2];
-            shuffleArray(offsets);
-            for (const offset of offsets) {
-                 if (choices.size >= 3) break;
-                 const potentialChoice = correctAnswer + offset;
-                 if (potentialChoice > 0 && !choices.has(potentialChoice)) {
-                     choices.add(potentialChoice);
-                 }
-            }
-            let attempts = 0;
-            while (choices.size < 3 && attempts < 10) {
-                const min = Math.max(1, correctAnswer - 5);
-                const max = correctAnswer + 5;
-                let incorrectAnswer = Math.floor(Math.random() * (max - min + 1)) + min;
-                if (incorrectAnswer > 0 && !choices.has(incorrectAnswer)) {
-                     choices.add(incorrectAnswer);
-                }
-                attempts++;
-            }
-            let fallbackCounter = 1;
-             while (choices.size < 3) {
-                let fallbackChoice = correctAnswer + offsets.length + fallbackCounter;
-                if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
-                    choices.add(fallbackChoice);
-                } else {
-                    fallbackChoice = Math.max(1, correctAnswer - offsets.length - fallbackCounter);
-                     if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
-                         choices.add(fallbackChoice);
-                     }
-                }
-                fallbackCounter++;
-                 if (fallbackCounter > 10) break;
-             }
-            return Array.from(choices);
-        }
-
-        function updateProgress() {
-            const totalQuestions = currentSet.length;
-            const completedQuestions = currentQuestionIndex;
-            const progressPercentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
-            progressText.textContent = `${completedQuestions} / ${totalQuestions}`;
-            progressBarFill.style.width = `${progressPercentage}%`;
-            console.log(`Progress updated: ${completedQuestions} / ${totalQuestions} (${progressPercentage.toFixed(0)}%)`);
-        }
+        function updateProgress() { /* ... no changes ... */
+             const totalQuestions = currentSet.length; const completedQuestions = currentQuestionIndex;
+             const progressPercentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
+             progressText.textContent = `${completedQuestions} / ${totalQuestions}`; progressBarFill.style.width = `${progressPercentage}%`;
+             console.log(`Progress: ${completedQuestions}/${totalQuestions} (${progressPercentage.toFixed(0)}%)`);
+         }
 
         function checkAnswer(button) {
-            Tone.start().catch(e => console.warn("Audio context likely already started or failed:", e));
+            Tone.start().catch(e => console.warn("Audio context issue:", e));
             if (isWaitingToProceed) return;
-            console.log(`Checking answer for question index ${currentQuestionIndex}...`);
+            console.log(`Checking answer for index ${currentQuestionIndex}...`);
 
             const selectedAnswer = parseInt(button.dataset.answer);
             const questionData = currentSet[currentQuestionIndex];
@@ -513,36 +287,41 @@
 
             choiceButtons.forEach(btn => btn.disabled = true);
 
+            // --- Flashcard Style Update ---
+            flashcard.classList.remove('bg-white', 'border', 'border-slate-300');
+            questionText.classList.remove('text-slate-800');
+            questionText.textContent = ''; // Clear the original question text in both cases
+
             if (selectedAnswer === correctAnswer) {
                 if (!isRedoing) score++;
-                feedbackText.textContent = 'Correct!';
-                feedbackText.className = 'mt-2 text-lg font-semibold text-emerald-600';
-                button.className = 'choice-button bg-emerald-500 text-white text-lg md:text-xl';
+                // Style Flashcard Correct
+                flashcard.classList.add('bg-emerald-500', 'text-white');
+                // ***** SHOW FULL ANSWER ON CORRECT *****
+                feedbackText.innerHTML = `${questionData.dividend} ÷ ${questionData.divisor} = <span class="font-bold text-2xl md:text-3xl">${correctAnswer}</span>`;
+                feedbackText.className = 'mt-2 text-xl md:text-2xl font-semibold text-white'; // Make style consistent with incorrect display
+                // Style Button Correct
+                button.className = 'choice-button bg-emerald-600 text-white text-lg md:text-xl ring-2 ring-white';
                 myConfetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
                 correctSound.triggerAttackRelease("G5", "8n", Tone.now());
                  console.log("Answer correct!");
             } else {
-                console.log(`Answer incorrect. Correct: ${correctAnswer}, User: ${selectedAnswer}`);
-                questionText.textContent = '';
+                // Style Flashcard Incorrect
+                flashcard.classList.add('bg-red-500', 'text-white', 'shake');
+                // Show full answer on incorrect (already doing this)
                 feedbackText.innerHTML = `${questionData.dividend} ÷ ${questionData.divisor} = <span class="font-bold text-2xl md:text-3xl">${correctAnswer}</span>`;
-                feedbackText.className = 'mt-2 text-xl md:text-2xl font-semibold text-red-600';
-                button.className = 'choice-button bg-red-500 text-white text-lg md:text-xl';
-                flashcard.classList.add('shake', 'flash-red');
-                choiceButtons.forEach(btn => {
-                     if (parseInt(btn.dataset.answer) === correctAnswer) {
-                         btn.className = 'choice-button bg-emerald-100 border border-emerald-400 text-slate-600 text-lg md:text-xl opacity-80';
-                     }
-                });
-                 incorrectSound.triggerAttackRelease("C3", "8n");
-                 incorrectAnswers.push({
-                    questionData: questionData,
-                    userAnswer: selectedAnswer
-                 });
+                feedbackText.className = 'mt-2 text-xl md:text-2xl font-semibold text-white';
+                // Style Button Incorrect
+                button.className = 'choice-button bg-red-600 text-white text-lg md:text-xl ring-2 ring-white';
+                choiceButtons.forEach(btn => { if (parseInt(btn.dataset.answer) === correctAnswer) btn.className = 'choice-button bg-emerald-100 border border-emerald-400 text-slate-600 text-lg md:text-xl opacity-80'; });
+                incorrectSound.triggerAttackRelease("C3", "8n");
+                incorrectAnswers.push({ questionData: questionData, userAnswer: selectedAnswer });
+                console.log(`Answer incorrect. Correct: ${correctAnswer}, User: ${selectedAnswer}`);
             }
+             // --- End Flashcard Style Update ---
 
             isWaitingToProceed = true;
-            flashcard.classList.add('clickable-card');
-            flashcard.style.cursor = 'pointer';
+            flashcard.classList.add('clickable-card'); flashcard.style.cursor = 'pointer';
+            continueText.className = 'mt-4 text-sm text-white opacity-80';
             continueText.classList.remove('hidden');
             console.log("Waiting to proceed...");
 
@@ -553,225 +332,50 @@
             currentQuestionIndex++;
         }
 
-        function proceedToNext() {
-             console.log("Proceeding to next question/results.");
-             if (proceedTimeoutId) {
-                 clearTimeout(proceedTimeoutId);
-                 proceedTimeoutId = null;
-             }
-             isWaitingToProceed = false;
-             flashcard.classList.remove('clickable-card');
-             flashcard.style.cursor = 'default';
-             continueText.classList.add('hidden');
-             flashcard.classList.remove('shake', 'flash-red');
-             displayQuestion();
+        function proceedToNext() { /* ... no changes ... */
+             console.log("Proceeding..."); if (proceedTimeoutId) { clearTimeout(proceedTimeoutId); proceedTimeoutId = null; } displayQuestion();
+         }
+        function showResults() { /* ... no changes ... */
+             console.log("Showing results."); endTime = new Date(); const timeDiff = Math.round((endTime - startTime) / 1000);
+             const totalQuestions = currentSet.length; const currentScore = isRedoing ? (totalQuestions - incorrectAnswers.length) : score;
+             const percentage = totalQuestions > 0 ? Math.round((currentScore / totalQuestions) * 100) : 0;
+             resultsHeadingEl.textContent = isRedoing ? 'Review Complete!' : `XP Dividers Set ${selectedSetNumber} Complete!`;
+             scoreDisplayEl.textContent = `${currentScore}/${totalQuestions}`; percentageEl.textContent = `${percentage}`; timeTakenEl.textContent = `${timeDiff}s`;
+             if (percentage === 100) encouragementTextEl.textContent = isRedoing ? "Perfect review!" : "Fantastic job!";
+             else if (percentage >= 70) encouragementTextEl.textContent = isRedoing ? "Good review!" : "Great effort!";
+             else encouragementTextEl.textContent = isRedoing ? "Keep reviewing!" : "Practice makes perfect!";
+             encouragementTextEl.className = `text-lg font-semibold mb-6 ${percentage===100?'text-emerald-700':percentage>=70?'text-sky-700':'text-orange-700'}`;
+             flashcardScreen.classList.add('hidden'); resultsScreen.classList.remove('hidden');
+             const trackWidth = raceTrackContainer.offsetWidth; const effectiveTrackWidth = trackWidth - 24; const animationDuration = 1500; const animationStartTime = performance.now();
+             rocketEl.style.left = '0px'; raceTrackFillEl.style.width = '0px';
+             function animateRocket(currentTime) { const elapsedTime = currentTime - animationStartTime; const progress = Math.min(elapsedTime / animationDuration, 1); const animatedPercentage = Math.round(progress * percentage); const position = Math.max(0, (animatedPercentage / 100) * effectiveTrackWidth); rocketEl.style.left = `${position}px`; raceTrackFillEl.style.width = `${position}px`; if (progress < 1) requestAnimationFrame(animateRocket); else { const finalPosition = Math.max(0, (percentage / 100) * effectiveTrackWidth); rocketEl.style.left = `${finalPosition}px`; raceTrackFillEl.style.width = `${finalPosition}px`; console.log(`Rocket animation finished at ${percentage}%.`); } } requestAnimationFrame(animateRocket); console.log("Rocket animation started.");
+             incorrectList.innerHTML = ''; const finalIncorrect = incorrectAnswers;
+             if (finalIncorrect.length > 0) { incorrectListContainer.classList.remove('hidden'); noIncorrectText.classList.add('hidden'); finalIncorrect.forEach(item => { const li = document.createElement('li'); li.textContent = `${item.questionData.dividend} ÷ ${item.questionData.divisor} = ${item.questionData.answer} (You: ${item.userAnswer})`; incorrectList.appendChild(li); }); redoIncorrectButton.classList.toggle('hidden', isRedoing); }
+             else { incorrectListContainer.classList.add('hidden'); noIncorrectText.classList.remove('hidden'); redoIncorrectButton.classList.add('hidden'); }
+             const userDeviceInfo = navigator.platform || 'N/A'; const localTime = new Date().toString(); let userTimezone = 'N/A'; try { userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { console.warn("TZ error:", e); } const incorrectDetails = finalIncorrect.map(item => ({ question: `${item.questionData.dividend}/${item.questionData.divisor}`, correctAnswer: item.questionData.answer, userAnswer: item.userAnswer }));
+             sendResultsToWebhook({ name: userName, activity: "Division", set: selectedSetNumber, score: currentScore, totalQuestions: totalQuestions, percentage: percentage, timeTaken: timeDiff, incorrectAnswers: incorrectDetails, isRedoing: isRedoing, device: userDeviceInfo, deviceTime: localTime, timezone: userTimezone });
+             if (isRedoing) { incorrectAnswers = []; isRedoing = false; }
+         }
+        function redoIncorrect() { /* ... no changes ... */
+             console.log("Redoing incorrect."); const questionsToRedo = incorrectAnswers.map(item => item.questionData); if (questionsToRedo.length === 0) { alert("No incorrect answers!"); return; }
+             currentSet = questionsToRedo; shuffleArray(currentSet); currentQuestionIndex = 0; incorrectAnswers = []; isRedoing = true;
+             flashcardSetTitle.textContent = `XP Dividers - Redoing Missed`; resultsScreen.classList.add('hidden'); flashcardScreen.classList.remove('hidden');
+             startTime = new Date(); console.log(`Starting redo round with ${currentSet.length} questions.`); displayQuestion();
+         }
+        function showSetSelection() { /* ... no changes ... */
+             console.log("Showing set selection."); if (proceedTimeoutId) { clearTimeout(proceedTimeoutId); proceedTimeoutId = null; } isWaitingToProceed = false; isRedoing = false;
+             nameModal.style.display = 'none'; flashcardScreen.classList.add('hidden'); resultsScreen.classList.add('hidden'); setSelectionScreen.classList.remove('hidden');
+             progressText.textContent = `0 / 0`; progressBarFill.style.width = '0%'; console.log("Reset progress and showing set selection.");
+         }
+        function sendResultsToWebhook(resultsData) { /* ... no changes ... */
+            if (!navigator.onLine) { console.warn("Offline. Skipping webhook."); return; } console.log("Sending to webhook:", WEBHOOK_URL); console.log("Payload:", resultsData);
+            fetch(WEBHOOK_URL, { method: 'POST', mode: 'cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(resultsData) })
+            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(`Webhook Error ${response.status}: ${text}`); }); } console.log('Webhook success.'); return response.json().catch(() => response.text()); })
+            .then(data => console.log("Webhook response:", data)).catch((error) => console.error('Webhook send error:', error));
         }
-
-        function showResults() {
-            console.log("Showing results screen.");
-            endTime = new Date();
-            const timeDiff = Math.round((endTime - startTime) / 1000);
-            const totalQuestions = currentSet.length;
-            const currentScore = isRedoing ? (totalQuestions - incorrectAnswers.length) : score;
-            const percentage = totalQuestions > 0 ? Math.round((currentScore / totalQuestions) * 100) : 0;
-
-            resultsHeadingEl.textContent = isRedoing ? 'Review Complete!' : `XP Dividers Set ${selectedSetNumber} Complete!`;
-            scoreDisplayEl.textContent = `${currentScore} / ${totalQuestions}`;
-            percentageEl.textContent = `${percentage}`;
-            timeTakenEl.textContent = `${timeDiff} seconds`;
-
-            if (percentage === 100) {
-                encouragementTextEl.textContent = isRedoing ? "Perfect review!" : "Fantastic job! You mastered this set!";
-                encouragementTextEl.className = 'text-lg text-emerald-700 font-semibold mb-6';
-            } else if (percentage >= 70) {
-                 encouragementTextEl.textContent = isRedoing ? "Good review! Keep practicing!" : "Great effort! Keep practicing to improve!";
-                 encouragementTextEl.className = 'text-lg text-sky-700 font-semibold mb-6';
-            } else {
-                 encouragementTextEl.textContent = isRedoing ? "Keep reviewing these facts!" : "Practice makes perfect!";
-                 encouragementTextEl.className = 'text-lg text-orange-700 font-semibold mb-6';
-            }
-
-            flashcardScreen.classList.add('hidden');
-            resultsScreen.classList.remove('hidden');
-
-            const trackWidth = raceTrackContainer.offsetWidth;
-            const effectiveTrackWidth = trackWidth - 24;
-            const animationDuration = 1500;
-            const animationStartTime = performance.now();
-            rocketEl.style.left = '0px';
-            raceTrackFillEl.style.width = '0px';
-
-            function animateRocket(currentTime) {
-                const elapsedTime = currentTime - animationStartTime;
-                const progress = Math.min(elapsedTime / animationDuration, 1);
-                const animatedPercentage = Math.round(progress * percentage);
-                const position = Math.max(0, (animatedPercentage / 100) * effectiveTrackWidth);
-                rocketEl.style.left = `${position}px`;
-                raceTrackFillEl.style.width = `${position}px`;
-                if (progress < 1) {
-                    requestAnimationFrame(animateRocket);
-                } else {
-                     const finalPosition = Math.max(0, (percentage / 100) * effectiveTrackWidth);
-                     rocketEl.style.left = `${finalPosition}px`;
-                     raceTrackFillEl.style.width = `${finalPosition}px`;
-                     console.log(`Rocket animation finished at ${percentage}%. Final position: ${finalPosition}px. Final fill width: ${finalPosition}px`);
-                }
-            }
-            requestAnimationFrame(animateRocket);
-             console.log("Rocket and progress bar animation started.");
-
-            incorrectList.innerHTML = '';
-            const finalIncorrect = incorrectAnswers;
-            if (finalIncorrect.length > 0) {
-                incorrectListContainer.classList.remove('hidden');
-                noIncorrectText.classList.add('hidden');
-                finalIncorrect.forEach(item => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `${item.questionData.dividend} ÷ ${item.questionData.divisor} = ${item.questionData.answer} (You answered: ${item.userAnswer})`;
-                    incorrectList.appendChild(listItem);
-                });
-                 if (!isRedoing) {
-                    redoIncorrectButton.classList.remove('hidden');
-                 } else {
-                     redoIncorrectButton.classList.add('hidden');
-                 }
-            } else {
-                incorrectListContainer.classList.add('hidden');
-                noIncorrectText.classList.remove('hidden');
-                redoIncorrectButton.classList.add('hidden');
-            }
-
-             // --- Prepare and Send Webhook Data ---
-             const userDeviceInfo = navigator.platform || 'N/A'; // Renamed variable for clarity
-             const localTime = new Date().toString();
-             let userTimezone = 'N/A';
-             try {
-                 userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-             } catch (e) {
-                 console.warn("Could not determine timezone:", e);
-             }
-            const incorrectDetails = finalIncorrect.map(item => ({
-                question: `${item.questionData.dividend} / ${item.questionData.divisor}`,
-                correctAnswer: item.questionData.answer,
-                userAnswer: item.userAnswer
-            }));
-
-            sendResultsToWebhook({
-                name: userName,
-                activity: "Division",
-                set: selectedSetNumber,
-                score: currentScore,
-                totalQuestions: totalQuestions,
-                percentage: percentage,
-                timeTaken: timeDiff,
-                incorrectAnswers: incorrectDetails,
-                isRedoing: isRedoing,
-                // ***** UPDATED KEY: device *****
-                device: userDeviceInfo,
-                deviceTime: localTime,
-                timezone: userTimezone
-            });
-
-            if (isRedoing) {
-                incorrectAnswers = [];
-                isRedoing = false;
-            }
-        }
-
-        function redoIncorrect() {
-            console.log("Redoing incorrect answers.");
-            const questionsToRedo = incorrectAnswers.map(item => item.questionData);
-            if (questionsToRedo.length === 0) {
-                alert("No incorrect answers to redo!");
-                return;
-            }
-            currentSet = questionsToRedo;
-            shuffleArray(currentSet);
-            currentQuestionIndex = 0;
-            incorrectAnswers = [];
-            isRedoing = true;
-            flashcardSetTitle.textContent = `XP Dividers - Redoing Missed`;
-            resultsScreen.classList.add('hidden');
-            flashcardScreen.classList.remove('hidden');
-            startTime = new Date();
-            console.log(`Starting redo round with ${currentSet.length} questions.`);
-            displayQuestion();
-        }
-
-        function showSetSelection() {
-            console.log("Showing set selection screen.");
-            if (proceedTimeoutId) {
-                clearTimeout(proceedTimeoutId);
-                proceedTimeoutId = null;
-            }
-            isWaitingToProceed = false;
-            isRedoing = false;
-            nameModal.style.display = 'none';
-            flashcardScreen.classList.add('hidden');
-            resultsScreen.classList.add('hidden');
-            setSelectionScreen.classList.remove('hidden');
-            progressText.textContent = `0 / 0`;
-            progressBarFill.style.width = '0%';
-            // Removed addWebhookSettingsButton call
-            console.log("Resetting progress display and showing set selection.");
-        }
-
-        function sendResultsToWebhook(resultsData) {
-             if (!navigator.onLine) {
-                console.warn("Browser is offline. Skipping sending results.");
-                return;
-             }
-            // No longer check for default URL as it's always used
-            console.log("Attempting to send results to webhook:", WEBHOOK_URL);
-            console.log("Webhook Payload:", resultsData);
-
-            fetch(WEBHOOK_URL, {
-                method: 'POST',
-                 mode: 'cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(resultsData),
-            })
-            .then(response => {
-                if (!response.ok) {
-                     return response.text().then(text => {
-                         console.error(`Webhook response not OK: ${response.status} ${response.statusText}`, `Response body: ${text}`);
-                         throw new Error(`Webhook failed with status ${response.status}. Body: ${text}`);
-                     });
-                } else {
-                    console.log('Results successfully sent to webhook.');
-                    return response.json().catch(() => response.text());
-                }
-            })
-            .then(data => {
-                 console.log("Webhook success response:", data);
-             })
-            .catch((error) => {
-                console.error('Error sending results to webhook:', error);
-            });
-        }
-
-        // Webhook settings/modal functions removed:
-        // - openWebhookModal
-        // - closeWebhookModal
-        // - saveWebhookUrl
-        // - addWebhookSettingsButton
-
-         document.addEventListener('DOMContentLoaded', () => {
-            createDivisionQuestionSets();
-            // Removed addWebhookSettingsButton call
-
-            userName = localStorage.getItem(USER_NAME_STORAGE_KEY);
-            if (userName) {
-                console.log("User name found in local storage:", userName);
-                 showSetSelection();
-            } else {
-                console.log("No user name found. Showing name input modal.");
-                nameModal.style.display = 'flex';
-                userNameInput.focus();
-            }
-             // No need to load webhook URL from storage, it's a constant.
+        document.addEventListener('DOMContentLoaded', () => { /* ... no changes ... */
+             createDivisionQuestionSets(); userName = localStorage.getItem(USER_NAME_STORAGE_KEY);
+             if (userName) { console.log("User name found:", userName); showSetSelection(); } else { console.log("No user name found."); nameModal.style.display = 'flex'; userNameInput.focus(); }
              console.log("Using hardcoded Webhook URL:", WEBHOOK_URL);
          });
 
