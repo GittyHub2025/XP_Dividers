@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated Title -->
+    <title>XP Dividers Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+            20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.5s ease-in-out; }
+
+        @keyframes flash-red {
+            0%, 100% { background-color: white; border-color: #d1d5db; }
+            50% { background-color: #fee2e2; border-color: #ef4444; }
+        }
+        .flash-red { animation: flash-red 0.5s ease-in-out; }
+
+        /* Button base styles */
+        .choice-button, .action-button {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border-radius: 0.5rem;
+            font-weight: 600;
+            /* Adjusted padding for side-by-side layout */
+            padding: 0.75rem 0.5rem; /* Reduced horizontal padding */
+            text-align: center; /* Ensure text is centered */
+        }
+        /* Button hover/active states */
+        .choice-button:hover, .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 4px 8px rgba(0,0,0,0.12);
+        }
+        .choice-button:active, .action-button:active {
+            transform: translateY(0px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        /* Disabled button style */
+        .choice-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        /* Style for the flashcard when it's clickable */
+        .clickable-card {
+            cursor: pointer;
+        }
+
+        #progressBarFill { transition: width 0.3s ease-out; }
+        #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+        /* Generic Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-close-button:hover, .modal-close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+
+        /* Custom styles for the rocket progress bar */
+        .race-track-container {
+            position: relative;
+            width: 100%;
+            height: 30px; /* Height of the track area */
+            margin-top: 20px; /* Space above the track */
+            margin-bottom: 20px; /* Space below the track */
+            z-index: 1; /* Base z-index for container */
+        }
+
+        .race-track {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: calc(100% - 30px); /* Make space for the flag at the end */
+            height: 10px;
+            background-color: #d1d5db; /* Slate-300 (Background color) */
+            border-radius: 5px;
+            z-index: 2; /* Behind the fill */
+        }
+
+        /* New style for the colored fill */
+        .race-track-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 10px;
+            background-color: #3b82f6; /* Blue-500 (Fill color) */
+            border-radius: 5px;
+            width: 0%; /* Starts at 0, expands with animation */
+            z-index: 3; /* Above the background track */
+        }
+
+
+        /* Style for the rocket emoji */
+        .rocket {
+            position: absolute;
+            bottom: -8px; /* Adjust to position rocket on the track */
+            left: 0; /* Starting position */
+            font-size: 36px; /* Size of the emoji */
+            transform: translateX(-50%) ; /* Center the emoji */
+            z-index: 10; /* Ensure rocket is above the track and fill */
+        }
+
+        .checkered-flag {
+            position: absolute;
+            bottom: -8px; /* Align flag with the track */
+            right: 0;
+            font-size: 24px; /* Size of the emoji */
+            transform: translateX(50%); /* Center the flag emoji on the position */
+            z-index: 10; /* Ensure flag is above the track and fill */
+        }
+
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-200 via-sky-200 to-emerald-200 min-h-screen flex items-center justify-center p-4">
+
+    <div id="appContainer" class="w-full max-w-md mx-auto">
+
+        <!-- Name Input Modal -->
+         <div id="nameModal" class="modal">
+             <div class="modal-content text-center">
+                 <!-- Updated Title -->
+                 <h2 class="text-xl md:text-2xl font-semibold mb-4 text-indigo-800">Welcome, XP Divider!</h2>
+                 <p class="text-slate-600 mb-4">Please enter your name to get started.</p>
+                 <input type="text" id="userNameInput" placeholder="Your Name" class="w-full p-2 border border-slate-300 rounded mb-4 focus:ring-indigo-500 focus:border-indigo-500 text-center text-lg">
+                 <button onclick="saveUserName()" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white w-full py-3 px-6 text-lg">Start!</button>
+             </div>
+         </div>
+
+        <!-- Set Selection Screen -->
+        <div id="setSelectionScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
+            <!-- Updated Title -->
+            <h1 class="text-2xl md:text-3xl font-bold text-indigo-800 mb-6">XP Dividers</h1>
+            <p class="text-slate-600 mb-8">Choose a difficulty set:</p>
+            <div class="grid grid-cols-1 gap-4">
+                <!-- Updated Set Button Text -->
+                <button onclick="selectSet(1)" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white w-full py-3 px-6">Set 1 (Easiest)</button>
+                <button onclick="selectSet(2)" class="action-button bg-sky-500 hover:bg-sky-600 text-white w-full py-3 px-6">Set 2</button>
+                <button onclick="selectSet(3)" class="action-button bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 px-6">Set 3</button>
+                <button onclick="selectSet(4)" class="action-button bg-amber-500 hover:bg-amber-600 text-white w-full py-3 px-6">Set 4</button>
+                <button onclick="selectSet(5)" class="action-button bg-rose-500 hover:bg-rose-600 text-white w-full py-3 px-6">Set 5 (Hardest)</button>
+                 <!-- Button to open webhook settings will be added dynamically -->
+            </div>
+        </div>
+
+        <!-- Flashcard Screen -->
+        <div id="flashcardScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <!-- Added dynamic title element -->
+            <h2 id="flashcardSetTitle" class="text-xl md:text-2xl font-bold text-center text-indigo-700 mb-4">XP Dividers Set X</h2>
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-slate-600">Progress</span>
+                    <span id="progressText" class="text-sm font-medium text-indigo-700">0 / 0</span> </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5">
+                    <div id="progressBarFill" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div id="flashcard" class="bg-white border border-slate-300 rounded-lg p-6 mb-6 text-center min-h-[150px] flex flex-col items-center justify-center transition-all duration-200">
+                 <div id="flashcardContent">
+                     <p id="questionText" class="text-3xl md:text-4xl font-bold text-slate-800"></p>
+                     <p id="feedbackText" class="mt-2 text-lg font-semibold"></p>
+                     <p id="continueText" class="mt-4 text-sm text-slate-500 hidden">Tap card to continue...</p>
+                 </div>
+            </div>
+
+            <div id="answerChoices" class="grid grid-cols-3 gap-2 md:gap-4">
+                <button id="choice1" onclick="checkAnswer(this)" class="choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl"></button>
+                <button id="choice2" onclick="checkAnswer(this)" class="choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl"></button>
+                <button id="choice3" onclick="checkAnswer(this)" class="choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl"></button>
+            </div>
+             <button onclick="showSetSelection()" class="action-button mt-6 bg-slate-500 hover:bg-slate-600 text-white w-full text-sm py-3 px-6">Back to Set Selection</button>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
+            <!-- Updated: resultsHeading will now include the set number -->
+            <h2 id="resultsHeading" class="text-2xl md:text-3xl font-bold text-indigo-800 mb-4"></h2>
+
+            <div class="bg-emerald-500 text-white p-4 rounded-lg mb-6">
+                <p class="text-lg md:text-xl font-semibold mb-1">Your Score:</p>
+                <p id="scoreDisplay" class="text-4xl md:text-5xl font-bold italic"></p>
+            </div>
+
+            <div class="race-track-container">
+                <div class="race-track"></div> <!-- Background track -->
+                <div id="raceTrackFill" class="race-track-fill"></div> <!-- Colored fill -->
+                <span id="rocketEl" class="rocket">🚀</span>
+                <span id="checkeredFlag" class="checkered-flag">🏁</span>
+            </div>
+            <p class="text-lg text-slate-700 mb-2">Percentage: <span id="percentage" class="font-semibold"></span>%</p>
+            <p class="text-lg text-slate-700 mb-6">Time: <span id="timeTaken" class="font-semibold"></span> seconds</p>
+
+            <p id="encouragementText" class="text-lg text-indigo-700 font-semibold mb-6"></p>
+            <div id="incorrectListContainer" class="mb-6 text-left">
+                <h3 class="text-xl font-semibold text-red-600 mb-3">Review Incorrect Answers:</h3>
+                <ul id="incorrectList" class="list-disc list-inside space-y-1 text-slate-600"></ul>
+                 <p id="noIncorrectText" class="text-emerald-600 font-semibold hidden">Great job, no incorrect answers!</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="redoIncorrectButton" onclick="redoIncorrect()" class="action-button bg-orange-500 hover:bg-orange-600 text-white w-full py-3 px-6">Redo Incorrect</button>
+                <button onclick="showSetSelection()" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white w-full py-3 px-6">Choose New Set</button>
+            </div>
+        </div>
+
+        <!-- Webhook Settings Modal -->
+        <div id="webhookModal" class="modal">
+          <div class="modal-content">
+            <span class="modal-close-button" onclick="closeWebhookModal()">×</span>
+            <h2 class="text-xl font-semibold mb-4 text-indigo-800">Webhook Setup</h2>
+            <p class="text-slate-600 mb-4">Enter your Make.com (or other service) webhook URL below to send results data automatically.</p>
+            <input type="url" id="webhookUrlInput" placeholder="https://hook.make.com/xxxxxxxxxxxx" class="w-full p-2 border border-slate-300 rounded mb-4 focus:ring-indigo-500 focus:border-indigo-500">
+             <p class="text-xs text-slate-500 mb-4">You can change this later if needed.</p>
+            <button onclick="saveWebhookUrl()" class="action-button bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4">Save URL</button>
+          </div>
+        </div>
+
+    </div>
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <script>
+        // --- Configuration ---
+        const MAX_FACTOR = 12; // Max quotient and divisor
+        const QUESTIONS_PER_SET = 20; // Aim for this many questions per set
+        const TOTAL_SETS = 5;
+        const AUTO_PROCEED_DELAY = 600; // 0.6 seconds (slightly longer for division)
+        // ***** UPDATED DEFAULT WEBHOOK URL *****
+        const DEFAULT_WEBHOOK_URL = 'https://hook.us2.make.com/892ix736bi9necs2itozf1dayw9fklsf';
+        // Updated Storage Keys
+        const USER_NAME_STORAGE_KEY = 'xpDividersUserName';
+        const WEBHOOK_URL_STORAGE_KEY = 'xpDividersWebhookUrl';
+
+        // --- State Variables ---
+        let allDivisionQuestions = [];
+        let questionSets = Array(TOTAL_SETS).fill(null).map(() => []); // Initialize as array of 5 empty arrays
+        let currentSet = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let incorrectAnswers = []; // Will store { questionData, userAnswer }
+        let startTime;
+        let endTime;
+        let isRedoing = false;
+        let proceedTimeoutId = null;
+        let isWaitingToProceed = false;
+        let selectedSetNumber = 0;
+        let WEBHOOK_URL = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || DEFAULT_WEBHOOK_URL;
+        let userName = localStorage.getItem(USER_NAME_STORAGE_KEY) || '';
+
+        // --- Sound Synthesis (Tone.js) ---
+        const correctSound = new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.2 },
+        }).toDestination();
+        const incorrectSound = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 }
+        }).toDestination();
+
+        // --- Confetti ---
+        const confettiCanvas = document.getElementById('confettiCanvas');
+        const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
+
+        // --- DOM Elements ---
+        const nameModal = document.getElementById('nameModal');
+        const userNameInput = document.getElementById('userNameInput');
+        const setSelectionScreen = document.getElementById('setSelectionScreen');
+        const flashcardScreen = document.getElementById('flashcardScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const flashcardSetTitle = document.getElementById('flashcardSetTitle'); // Title on flashcard screen
+        const progressText = document.getElementById('progressText');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const flashcard = document.getElementById('flashcard');
+        const questionText = document.getElementById('questionText');
+        const feedbackText = document.getElementById('feedbackText');
+        const continueText = document.getElementById('continueText');
+        const answerChoicesContainer = document.getElementById('answerChoices');
+        const choiceButtons = [ document.getElementById('choice1'), document.getElementById('choice2'), document.getElementById('choice3') ];
+        const scoreDisplayEl = document.getElementById('scoreDisplay');
+        const percentageEl = document.getElementById('percentage');
+        const timeTakenEl = document.getElementById('timeTaken');
+        const incorrectListContainer = document.getElementById('incorrectListContainer');
+        const incorrectList = document.getElementById('incorrectList');
+        const noIncorrectText = document.getElementById('noIncorrectText');
+        const redoIncorrectButton = document.getElementById('redoIncorrectButton');
+        const webhookModal = document.getElementById('webhookModal');
+        const webhookUrlInput = document.getElementById('webhookUrlInput');
+        const encouragementTextEl = document.getElementById('encouragementText');
+        const resultsHeadingEl = document.getElementById('resultsHeading');
+        const raceTrackContainer = document.querySelector('#resultsScreen .race-track-container');
+        const raceTrackFillEl = document.getElementById('raceTrackFill');
+        const rocketEl = document.getElementById('rocketEl');
+
+
+        // --- Event Listener for Proceeding (Tap on Flashcard) ---
+        flashcard.addEventListener('click', () => {
+            if (isWaitingToProceed) {
+                console.log("Flashcard tapped, proceeding to next.");
+                proceedToNext();
+            }
+        });
+
+        // --- Event Listener for Enter Key on Name Input ---
+        userNameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveUserName();
+            }
+        });
+
+
+        // --- Functions ---
+
+        function generateAllDivisionQuestions() {
+            const questions = new Set();
+            // Generate division facts: dividend / divisor = quotient
+            // Loop through potential quotients and divisors
+            for (let quotient = 1; quotient <= MAX_FACTOR; quotient++) {
+                // Start divisor from 2 to avoid trivial division by 1
+                for (let divisor = 2; divisor <= MAX_FACTOR; divisor++) {
+                    let dividend = quotient * divisor;
+                    // Optional: Add a constraint on max dividend size if needed
+                    // if (dividend <= MAX_FACTOR * MAX_FACTOR) {
+                         // Store dividend, divisor, and the answer (quotient)
+                         questions.add(JSON.stringify({ dividend: dividend, divisor: divisor, answer: quotient }));
+                    // }
+                }
+            }
+            console.log(`Generated ${questions.size} unique division questions.`);
+            return Array.from(questions).map(q => JSON.parse(q));
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function createDivisionQuestionSets() {
+            allDivisionQuestions = generateAllDivisionQuestions();
+            questionSets = Array(TOTAL_SETS).fill(null).map(() => []); // Reset sets
+
+            // Define divisor ranges for difficulty sets
+            const setDivisorRanges = [
+                [2, 3],       // Set 1: Divide by 2, 3
+                [4, 5],       // Set 2: Divide by 4, 5
+                [6, 7],       // Set 3: Divide by 6, 7
+                [8, 9],       // Set 4: Divide by 8, 9
+                [10, 11, 12] // Set 5: Divide by 10, 11, 12
+            ];
+
+            // Filter questions into sets based on divisor
+            allDivisionQuestions.forEach(q => {
+                for (let i = 0; i < TOTAL_SETS; i++) {
+                    if (setDivisorRanges[i].includes(q.divisor)) {
+                        questionSets[i].push(q);
+                        break; // Add to the first matching set only
+                    }
+                }
+            });
+
+            // Shuffle each set and limit size
+            questionSets = questionSets.map((set, index) => {
+                shuffleArray(set);
+                const finalSet = set.slice(0, QUESTIONS_PER_SET);
+                console.log(`Set ${index + 1} created with ${finalSet.length} questions (Divisors: ${setDivisorRanges[index].join(', ')}).`);
+                return finalSet;
+            });
+
+             console.log(`Created ${questionSets.length} division sets.`);
+        }
+
+         function saveUserName() {
+            const name = userNameInput.value.trim();
+            if (name) {
+                userName = name;
+                localStorage.setItem(USER_NAME_STORAGE_KEY, userName);
+                console.log("User name saved:", userName);
+            } else {
+                 userName = 'Anonymous';
+                 localStorage.removeItem(USER_NAME_STORAGE_KEY);
+                 console.log("No name entered. Using default:", userName);
+            }
+            nameModal.style.display = 'none';
+            showSetSelection();
+        }
+
+
+        function selectSet(setIndex) {
+            console.log(`Selecting division set ${setIndex}.`);
+            Tone.start().then(() => {
+                console.log("Audio context started.");
+            }).catch(e => {
+                console.error("Error starting audio context:", e);
+            });
+
+            if (setIndex < 1 || setIndex > questionSets.length) {
+                console.error(`Invalid set index selected: ${setIndex}`);
+                return;
+            }
+            currentSet = questionSets[setIndex - 1];
+            selectedSetNumber = setIndex;
+
+            if (!currentSet) { // Check if the set exists, even if empty
+                 alert("Error loading question set. Please refresh.");
+                 console.error("Selected set is undefined.");
+                 return;
+            }
+             if (currentSet.length === 0) {
+                 alert(`Set ${selectedSetNumber} has no questions generated for the current criteria. Please try another set or adjust generation logic.`);
+                 console.warn(`Selected set ${selectedSetNumber} is empty.`);
+                 showSetSelection(); // Go back to selection
+                 return;
+             }
+
+            currentQuestionIndex = 0;
+            score = 0;
+            incorrectAnswers = [];
+            isRedoing = false;
+            resetCardState();
+
+            // Update Flashcard Screen Title
+            flashcardSetTitle.textContent = `XP Dividers Set ${selectedSetNumber}`;
+
+            setSelectionScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            flashcardScreen.classList.remove('hidden');
+            startTime = new Date();
+            console.log(`Starting set ${selectedSetNumber} with ${currentSet.length} questions.`);
+            displayQuestion(); // Includes initial progress update
+        }
+
+        function resetCardState() {
+            if (proceedTimeoutId) {
+                clearTimeout(proceedTimeoutId);
+                proceedTimeoutId = null;
+            }
+            isWaitingToProceed = false;
+            feedbackText.textContent = '';
+            feedbackText.className = 'mt-2 text-lg font-semibold';
+            flashcard.classList.remove('shake', 'flash-red', 'clickable-card');
+            flashcard.style.cursor = 'default';
+            continueText.classList.add('hidden');
+            console.log("Card state reset.");
+        }
+
+        function displayQuestion() {
+            console.log(`Displaying question ${currentQuestionIndex + 1} / ${currentSet.length}`);
+            resetCardState();
+
+            if (currentQuestionIndex >= currentSet.length) {
+                showResults();
+                return;
+            }
+
+            const questionData = currentSet[currentQuestionIndex];
+            // Display Division Problem
+            questionText.textContent = `${questionData.dividend} ÷ ${questionData.divisor} = ?`;
+            feedbackText.textContent = '';
+            feedbackText.className = 'mt-2 text-lg font-semibold';
+
+            const correctAnswer = questionData.answer; // The answer is the quotient
+            // Generate choices based on the quotient (answer)
+            const choices = generateChoices(correctAnswer);
+            choices.sort((a, b) => a - b);
+
+            choiceButtons.forEach((button, index) => {
+                button.textContent = choices[index];
+                button.disabled = false;
+                button.dataset.answer = choices[index];
+                button.className = 'choice-button bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg md:text-xl';
+            });
+
+            updateProgress(); // Update progress after setting up the question
+        }
+
+        // Simplified generateChoices, focusing on the correct answer (quotient)
+        function generateChoices(correctAnswer) {
+            const choices = new Set([correctAnswer]);
+
+            // Add choices +/- 1 or 2 from the correct answer
+            const offsets = [1, -1, 2, -2];
+            shuffleArray(offsets);
+
+            for (const offset of offsets) {
+                 if (choices.size >= 3) break;
+                 const potentialChoice = correctAnswer + offset;
+                 if (potentialChoice > 0 && !choices.has(potentialChoice)) {
+                     choices.add(potentialChoice);
+                 }
+            }
+
+            // If still not enough choices, add random numbers near the correct answer
+            let attempts = 0;
+            while (choices.size < 3 && attempts < 10) {
+                const min = Math.max(1, correctAnswer - 5);
+                const max = correctAnswer + 5;
+                let incorrectAnswer = Math.floor(Math.random() * (max - min + 1)) + min;
+                if (incorrectAnswer > 0 && !choices.has(incorrectAnswer)) {
+                     choices.add(incorrectAnswer);
+                }
+                attempts++;
+            }
+
+             // Absolute fallback if duplicates/negatives caused issues
+            let fallbackCounter = 1;
+             while (choices.size < 3) {
+                let fallbackChoice = correctAnswer + offsets.length + fallbackCounter;
+                if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
+                    choices.add(fallbackChoice);
+                } else {
+                    // Try a different number if collision
+                    fallbackChoice = Math.max(1, correctAnswer - offsets.length - fallbackCounter);
+                     if (fallbackChoice > 0 && !choices.has(fallbackChoice)) {
+                         choices.add(fallbackChoice);
+                     }
+                }
+                fallbackCounter++;
+                 if (fallbackCounter > 10) break; // Prevent infinite loop
+             }
+
+
+            return Array.from(choices);
+        }
+
+
+        function updateProgress() {
+            const totalQuestions = currentSet.length;
+            // Use currentQuestionIndex for completed questions BEFORE incrementing
+            const completedQuestions = currentQuestionIndex;
+            const progressPercentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
+            progressText.textContent = `${completedQuestions} / ${totalQuestions}`;
+            progressBarFill.style.width = `${progressPercentage}%`;
+            console.log(`Progress updated: ${completedQuestions} / ${totalQuestions} (${progressPercentage.toFixed(0)}%)`);
+        }
+
+
+        function checkAnswer(button) {
+            Tone.start().catch(e => console.warn("Audio context likely already started or failed:", e));
+
+            if (isWaitingToProceed) return;
+
+            console.log(`Checking answer for question index ${currentQuestionIndex}...`);
+
+            const selectedAnswer = parseInt(button.dataset.answer);
+            const questionData = currentSet[currentQuestionIndex];
+            const correctAnswer = questionData.answer; // The quotient
+
+            choiceButtons.forEach(btn => btn.disabled = true);
+
+            if (selectedAnswer === correctAnswer) {
+                if (!isRedoing) score++;
+                feedbackText.textContent = 'Correct!';
+                feedbackText.className = 'mt-2 text-lg font-semibold text-emerald-600';
+                button.className = 'choice-button bg-emerald-500 text-white text-lg md:text-xl';
+                myConfetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                correctSound.triggerAttackRelease("G5", "8n", Tone.now());
+                 console.log("Answer correct!");
+            } else {
+                console.log(`Answer incorrect. Correct: ${correctAnswer}, User: ${selectedAnswer}`);
+                questionText.textContent = ''; // Clear question to show feedback prominently
+                // Show the full correct division fact
+                feedbackText.innerHTML = `${questionData.dividend} ÷ ${questionData.divisor} = <span class="font-bold text-2xl md:text-3xl">${correctAnswer}</span>`;
+                feedbackText.className = 'mt-2 text-xl md:text-2xl font-semibold text-red-600';
+                button.className = 'choice-button bg-red-500 text-white text-lg md:text-xl';
+                flashcard.classList.add('shake', 'flash-red');
+                choiceButtons.forEach(btn => {
+                     if (parseInt(btn.dataset.answer) === correctAnswer) {
+                         // Highlight correct answer gently
+                         btn.className = 'choice-button bg-emerald-100 border border-emerald-400 text-slate-600 text-lg md:text-xl opacity-80';
+                     }
+                });
+                 incorrectSound.triggerAttackRelease("C3", "8n");
+                 // Store the full question data and user's answer for review/redo
+                 incorrectAnswers.push({
+                    questionData: questionData,
+                    userAnswer: selectedAnswer
+                 });
+            }
+
+            isWaitingToProceed = true;
+            flashcard.classList.add('clickable-card');
+            flashcard.style.cursor = 'pointer';
+            continueText.classList.remove('hidden');
+            console.log("Waiting to proceed...");
+
+            if (proceedTimeoutId) clearTimeout(proceedTimeoutId);
+            proceedTimeoutId = setTimeout(proceedToNext, AUTO_PROCEED_DELAY);
+            console.log(`Auto-proceed timeout set for ${AUTO_PROCEED_DELAY}ms.`);
+
+            currentQuestionIndex++; // Increment index AFTER processing the current question
+             // Update progress bar AFTER incrementing index to show progress towards next question
+            // updateProgress(); // No, update progress *before* showing next question or results
+        }
+
+        function proceedToNext() {
+             console.log("Proceeding to next question/results.");
+             if (proceedTimeoutId) {
+                 clearTimeout(proceedTimeoutId);
+                 proceedTimeoutId = null;
+             }
+
+             isWaitingToProceed = false;
+             flashcard.classList.remove('clickable-card');
+             flashcard.style.cursor = 'default';
+             continueText.classList.add('hidden');
+             flashcard.classList.remove('shake', 'flash-red');
+
+             displayQuestion(); // This will handle showing results if index is out of bounds
+        }
+
+
+        function showResults() {
+            console.log("Showing results screen.");
+            endTime = new Date();
+            const timeDiff = Math.round((endTime - startTime) / 1000);
+            const totalQuestions = currentSet.length; // Use actual length of the current set
+            const currentScore = isRedoing ? (totalQuestions - incorrectAnswers.length) : score;
+            const percentage = totalQuestions > 0 ? Math.round((currentScore / totalQuestions) * 100) : 0;
+
+            // Update Results Title
+            resultsHeadingEl.textContent = isRedoing ? 'Review Complete!' : `XP Dividers Set ${selectedSetNumber} Complete!`;
+            scoreDisplayEl.textContent = `${currentScore} / ${totalQuestions}`;
+            percentageEl.textContent = `${percentage}`;
+            timeTakenEl.textContent = `${timeDiff} seconds`;
+
+            if (percentage === 100) {
+                encouragementTextEl.textContent = isRedoing ? "Perfect review!" : "Fantastic job! You mastered this set!";
+                encouragementTextEl.className = 'text-lg text-emerald-700 font-semibold mb-6';
+            } else if (percentage >= 70) {
+                 encouragementTextEl.textContent = isRedoing ? "Good review! Keep practicing!" : "Great effort! Keep practicing to improve!";
+                 encouragementTextEl.className = 'text-lg text-sky-700 font-semibold mb-6';
+            } else {
+                 encouragementTextEl.textContent = isRedoing ? "Keep reviewing these facts!" : "Practice makes perfect!";
+                 encouragementTextEl.className = 'text-lg text-orange-700 font-semibold mb-6';
+            }
+
+            flashcardScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+
+            // --- Rocket Animation ---
+            const trackWidth = raceTrackContainer.offsetWidth;
+            const effectiveTrackWidth = trackWidth - 24; // Adjust based on flag emoji size
+            const animationDuration = 1500;
+            const animationStartTime = performance.now();
+
+            rocketEl.style.left = '0px';
+            raceTrackFillEl.style.width = '0px';
+
+            function animateRocket(currentTime) {
+                const elapsedTime = currentTime - animationStartTime;
+                const progress = Math.min(elapsedTime / animationDuration, 1);
+                const animatedPercentage = Math.round(progress * percentage);
+                const position = Math.max(0, (animatedPercentage / 100) * effectiveTrackWidth);
+
+                rocketEl.style.left = `${position}px`;
+                raceTrackFillEl.style.width = `${position}px`;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateRocket);
+                } else {
+                     const finalPosition = Math.max(0, (percentage / 100) * effectiveTrackWidth);
+                     rocketEl.style.left = `${finalPosition}px`;
+                     raceTrackFillEl.style.width = `${finalPosition}px`;
+                     console.log(`Rocket animation finished at ${percentage}%. Final position: ${finalPosition}px. Final fill width: ${finalPosition}px`);
+                }
+            }
+            requestAnimationFrame(animateRocket);
+             console.log("Rocket and progress bar animation started.");
+
+            // --- Incorrect Answers List ---
+            incorrectList.innerHTML = '';
+            const finalIncorrect = incorrectAnswers; // Use the state variable
+            if (finalIncorrect.length > 0) {
+                incorrectListContainer.classList.remove('hidden');
+                noIncorrectText.classList.add('hidden');
+                finalIncorrect.forEach(item => {
+                    const listItem = document.createElement('li');
+                    // Display the division problem, correct answer, and user answer
+                    listItem.textContent = `${item.questionData.dividend} ÷ ${item.questionData.divisor} = ${item.questionData.answer} (You answered: ${item.userAnswer})`;
+                    incorrectList.appendChild(listItem);
+                });
+                 if (!isRedoing) {
+                    redoIncorrectButton.classList.remove('hidden'); // Show redo button only on initial run
+                 } else {
+                     redoIncorrectButton.classList.add('hidden'); // Hide redo button during redo session
+                 }
+
+            } else {
+                incorrectListContainer.classList.add('hidden');
+                noIncorrectText.classList.remove('hidden');
+                redoIncorrectButton.classList.add('hidden'); // Hide if no incorrect answers
+            }
+
+             // --- Prepare and Send Webhook Data ---
+             const userOS = navigator.platform || 'N/A';
+             const localTime = new Date().toString();
+             let userTimezone = 'N/A';
+             try {
+                 userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+             } catch (e) {
+                 console.warn("Could not determine timezone:", e);
+             }
+
+            // Prepare incorrect answers in a readable format for the webhook
+            const incorrectDetails = finalIncorrect.map(item => ({
+                question: `${item.questionData.dividend} / ${item.questionData.divisor}`, // Use / for data
+                correctAnswer: item.questionData.answer,
+                userAnswer: item.userAnswer
+            }));
+
+
+            sendResultsToWebhook({
+                name: userName,
+                activity: "Division", // Add activity type
+                set: selectedSetNumber,
+                score: currentScore,
+                totalQuestions: totalQuestions,
+                percentage: percentage,
+                timeTaken: timeDiff,
+                incorrectAnswers: incorrectDetails, // Send structured incorrect data
+                isRedoing: isRedoing,
+                os: userOS,
+                deviceTime: localTime,
+                timezone: userTimezone
+            });
+
+            // Clear incorrect answers only AFTER sending webhook and if redoing
+            if (isRedoing) {
+                incorrectAnswers = [];
+                isRedoing = false;
+            }
+        }
+
+        function redoIncorrect() {
+            console.log("Redoing incorrect answers.");
+            // Get the question data from the incorrect answers list
+            const questionsToRedo = incorrectAnswers.map(item => item.questionData);
+
+            if (questionsToRedo.length === 0) {
+                alert("No incorrect answers to redo!");
+                return;
+            }
+
+            currentSet = questionsToRedo; // Use the extracted question data objects directly
+            shuffleArray(currentSet);
+
+            currentQuestionIndex = 0;
+            // Don't reset score, results calculation handles it based on isRedoing
+            incorrectAnswers = []; // Clear the list for the redo round
+            isRedoing = true; // Set the flag
+
+            // Update Flashcard Screen Title for Redo
+            flashcardSetTitle.textContent = `XP Dividers - Redoing Missed`;
+
+            resultsScreen.classList.add('hidden');
+            flashcardScreen.classList.remove('hidden');
+            startTime = new Date();
+            console.log(`Starting redo round with ${currentSet.length} questions.`);
+            displayQuestion(); // Start the redo round
+        }
+
+
+        function showSetSelection() {
+            console.log("Showing set selection screen.");
+            if (proceedTimeoutId) {
+                clearTimeout(proceedTimeoutId);
+                proceedTimeoutId = null;
+            }
+            isWaitingToProceed = false;
+            isRedoing = false; // Ensure redo flag is reset
+            // incorrectAnswers = []; // Clear incorrect from previous runs when going back to main menu
+
+            nameModal.style.display = 'none';
+            flashcardScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            setSelectionScreen.classList.remove('hidden');
+
+            // Reset progress display for a potential new set
+            progressText.textContent = `0 / 0`; // Reset fully
+            progressBarFill.style.width = '0%';
+
+             if (!document.getElementById('webhookSettingsButton')) {
+                 addWebhookSettingsButton();
+             }
+            console.log("Resetting progress display and showing set selection.");
+        }
+
+        function sendResultsToWebhook(resultsData) {
+            if (!WEBHOOK_URL || WEBHOOK_URL === DEFAULT_WEBHOOK_URL && !localStorage.getItem(WEBHOOK_URL_STORAGE_KEY)) { // Also check if it's still the default *and* not explicitly saved
+                console.log("Webhook URL not set or is default (and not saved). Skipping sending results.");
+                return;
+            }
+             if (!navigator.onLine) {
+                console.warn("Browser is offline. Skipping sending results.");
+                return;
+             }
+
+
+            console.log("Attempting to send results to webhook:", WEBHOOK_URL);
+            console.log("Webhook Payload:", resultsData);
+
+
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                 mode: 'cors', // Needed for cross-origin requests to services like Make.com
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(resultsData),
+            })
+            .then(response => {
+                if (!response.ok) {
+                     // Try to get text even if response is not ok
+                     return response.text().then(text => {
+                         console.error(`Webhook response not OK: ${response.status} ${response.statusText}`, `Response body: ${text}`);
+                         throw new Error(`Webhook failed with status ${response.status}. Body: ${text}`);
+                     });
+                } else {
+                    console.log('Results successfully sent to webhook.');
+                    // Try to parse JSON, fall back to text if not JSON
+                    return response.json().catch(() => response.text());
+                }
+            })
+            .then(data => {
+                 console.log("Webhook success response:", data);
+             })
+            .catch((error) => {
+                console.error('Error sending results to webhook:', error);
+                 // Potentially alert the user or log more visibly if needed
+                 // alert('There was an issue sending your results data. Please check your connection or webhook setup.');
+            });
+        }
+
+        function openWebhookModal() {
+            webhookUrlInput.value = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || ''; // Show saved URL or empty
+            webhookModal.style.display = 'flex';
+        }
+
+        function closeWebhookModal() {
+            webhookModal.style.display = 'none';
+        }
+
+        function saveWebhookUrl() {
+            const url = webhookUrlInput.value.trim();
+            if (!url) {
+                 // Clear the stored URL and reset to default (but don't use default for sending unless explicitly saved)
+                 localStorage.removeItem(WEBHOOK_URL_STORAGE_KEY);
+                 WEBHOOK_URL = DEFAULT_WEBHOOK_URL; // Reset internal variable, but sending will be skipped
+                 console.log("Webhook URL cleared.");
+                 closeWebhookModal();
+                 return;
+            }
+
+            // Basic URL validation (doesn't guarantee it's a working webhook)
+            try {
+                new URL(url); // Check if it's a valid URL structure
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                     throw new Error("URL must start with http:// or https://");
+                }
+                // Save the valid URL
+                 localStorage.setItem(WEBHOOK_URL_STORAGE_KEY, url);
+                 WEBHOOK_URL = url; // Update internal variable
+                 console.log("Webhook URL saved:", WEBHOOK_URL);
+                 closeWebhookModal();
+
+             } catch (e) {
+                 console.error("Invalid URL format:", e.message);
+                 alert(`Invalid URL format. Please enter a valid webhook URL starting with http:// or https://. Error: ${e.message}`);
+             }
+        }
+
+
+        function addWebhookSettingsButton() {
+            const existingButton = document.getElementById('webhookSettingsButton');
+             if (!existingButton) {
+                const settingsButton = document.createElement('button');
+                settingsButton.textContent = 'Webhook Settings';
+                settingsButton.id = 'webhookSettingsButton';
+                settingsButton.className = 'action-button mt-6 bg-slate-400 hover:bg-slate-500 text-white w-full text-sm py-3 px-6';
+                settingsButton.onclick = openWebhookModal;
+                // Insert after the grid container
+                const setGrid = setSelectionScreen.querySelector('.grid');
+                if (setGrid && setGrid.parentNode) {
+                     setGrid.parentNode.insertBefore(settingsButton, setGrid.nextSibling);
+                } else {
+                    // Fallback if grid structure changes
+                    setSelectionScreen.appendChild(settingsButton);
+                }
+                console.log("Webhook settings button added.");
+            }
+        }
+
+         document.addEventListener('DOMContentLoaded', () => {
+            // Generate division sets first
+            createDivisionQuestionSets();
+            addWebhookSettingsButton(); // Ensure button is added
+
+            // Check for saved user name
+             userName = localStorage.getItem(USER_NAME_STORAGE_KEY);
+            if (userName) {
+                console.log("User name found in local storage:", userName);
+                 showSetSelection();
+            } else {
+                console.log("No user name found. Showing name input modal.");
+                nameModal.style.display = 'flex';
+                userNameInput.focus();
+            }
+             // Load saved webhook URL on startup
+             WEBHOOK_URL = localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) || DEFAULT_WEBHOOK_URL;
+             console.log("Using Webhook URL:", WEBHOOK_URL === DEFAULT_WEBHOOK_URL && !localStorage.getItem(WEBHOOK_URL_STORAGE_KEY) ? 'Default (will not send unless saved)' : WEBHOOK_URL);
+         });
+
+    </script>
+</body>
+</html>
